@@ -20,7 +20,7 @@ interface Pedido {
 export default function CocinaPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   
-  // MODIFICADO: El estado ahora almacena el objeto completo del pedido seleccionado para mostrar sus detalles
+  // El estado almacena el objeto completo del pedido seleccionado para mostrar sus detalles
   const [pedidoAConfirmar, setPedidoAConfirmar] = useState<Pedido | null>(null);
 
   const obtenerPedidosDelDia = async () => {
@@ -134,7 +134,7 @@ export default function CocinaPage() {
                   <div className={`p-4 border-b border-slate-700/50 flex justify-between items-center ${estaDespachado ? 'bg-slate-900/20' : 'bg-slate-800/40'}`}>
                     <div>
                       <h2 className={`text-xl font-black tracking-tight uppercase ${estaDespachado ? 'text-slate-400 line-through' : 'text-white'}`}>
-                        Mesa {numeroMesa}
+                        {esParaLlevar ? `Cliente: ${numeroMesa}` : `Mesa ${numeroMesa}`}
                       </h2>
                       <span className="text-[10px] bg-slate-700 text-slate-300 font-bold px-2 py-0.5 rounded-md uppercase mt-1 inline-flex items-center gap-1">
                         <User className="h-2.5 w-2.5" /> {mesera}
@@ -193,7 +193,7 @@ export default function CocinaPage() {
         </div>
       )}
 
-      {/* MODAL CENTRAL DE CONFIRMACIÓN CON DETALLES COMPLETOS */}
+      {/* MODAL CENTRAL DE CONFIRMACIÓN CON DETALLES COMPLETOS CORREGIDO */}
       {pedidoAConfirmar && (() => {
         const { numeroMesa, esParaLlevar, mesera, especificaciones } = desglosarCabeceraPedido(pedidoAConfirmar.mesa);
 
@@ -205,15 +205,19 @@ export default function CocinaPage() {
                 <AlertTriangle className="h-6 w-6 shrink-0 text-amber-500" />
                 <div>
                   <h3 className="text-base font-black tracking-tight">¿Confirmar despacho de orden?</h3>
-                  <p className="text-xs text-slate-400 font-medium">Revisa los componentes de la comanda antes de sacarla</p>
+                  <p className="text-xs text-slate-400 font-medium">Revisa los components de la comanda antes de sacarla</p>
                 </div>
               </div>
 
-              {/* Cabecera del Pedido */}
+              {/* Cabecera del Pedido Dinámica para Evitar "Mesa Juan" */}
               <div className="bg-slate-900 rounded-xl p-3 border border-slate-750 flex justify-between items-center">
                 <div>
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Ubicación</span>
-                  <span className="text-base font-black text-white uppercase tracking-wide">Mesa {numeroMesa}</span>
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase">
+                    {esParaLlevar ? 'Cliente' : 'Ubicación'}
+                  </span>
+                  <span className="text-base font-black text-white uppercase tracking-wide">
+                    {esParaLlevar ? numeroMesa : `Mesa ${numeroMesa}`}
+                  </span>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] text-slate-400 font-bold block uppercase">Mesera</span>
@@ -221,7 +225,7 @@ export default function CocinaPage() {
                 </div>
               </div>
 
-              {/* DETALLES DE LA ORDEN INYECTADOS */}
+              {/* Detalles de la Orden Inyectados */}
               <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumen de platos</p>
                 <div className="space-y-1.5">
@@ -270,9 +274,8 @@ export default function CocinaPage() {
   );
 }
 
-// Función auxiliar para renderizar el texto de especificaciones limpiamente
-function especificacionesTexto(especificaciones: string[]) {
-  return especificaciones.map((item, index) => (
+function especificacionesTexto(spec: string[]) {
+  return spec.map((item, index) => (
     <p key={index} className="text-xs text-amber-100/90 font-bold capitalize leading-relaxed pl-2.5 border-l-2 border-amber-500/40">
       {item}
     </p>

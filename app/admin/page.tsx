@@ -369,7 +369,9 @@ export default function AdminPage() {
                     <div key={p.id} className="py-4 flex justify-between items-start">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-black text-sm uppercase text-gray-950">Mesa {numeroMesa}</p>
+                          <p className="font-black text-sm uppercase text-white">
+  {p.mesa.includes('[TIPO:LLEVAR]') ? `Cliente: ${numeroMesa}` : `Mesa ${numeroMesa}`}
+</p>
                           <span className="text-[9px] px-2 py-0.5 rounded-md font-bold bg-emerald-700 text-white flex items-center gap-1"><User className="h-2.5 w-2.5" /> {nombreMesera}</span>
                         </div>
                         <div className="space-y-1 mt-2 pl-1">
