@@ -39,17 +39,12 @@ export default function CocinaPage() {
 
   useEffect(() => {
     obtenerPedidosDelDia();
-    
-    // Canal en tiempo real para recibir comandas y modificaciones de platos al instante
-    const canalCocina = supabase
-      .channel('realtime-cocina-flow')
+    const canal = supabase
+      .channel('cambios-cocina')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => obtenerPedidosDelDia())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'detalles_pedido' }, () => obtenerPedidosDelDia())
       .subscribe();
 
-    return () => { 
-      supabase.removeChannel(canalCocina); 
-    };
+    return () => { supabase.removeChannel(canal); };
   }, []);
 
   const ejecutarDespacho = async () => {

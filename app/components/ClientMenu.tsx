@@ -131,6 +131,8 @@ export default function ClientMenu() {
     const canal = supabase
       .channel('cambios-menu-cliente')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'platos' }, () => inicializarMenu())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_diario' }, () => inicializarMenu())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cajas' }, () => inicializarMenu())
       .subscribe();
 
     return () => {

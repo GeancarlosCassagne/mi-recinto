@@ -78,6 +78,19 @@ export default function AdminPage() {
     obtenerPlatos();
     obtenerMenuDelDia(fechaSeleccionada);
     cargarDatosDelDia(fechaSeleccionada);
+
+    // Canal en tiempo real para mantener sincronizado el panel de administración
+    const canalAdmin = supabase
+      .channel('cambios-admin-panel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => cargarDatosDelDia(fechaSeleccionada))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'platos' }, () => obtenerPlatos())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cajas' }, () => cargarDatosDelDia(fechaSeleccionada))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_diario' }, () => obtenerMenuDelDia(fechaSeleccionada))
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canalAdmin);
+    };
   }, [fechaSeleccionada]);
 
   const guardarPlato = async (e: React.FormEvent) => {
