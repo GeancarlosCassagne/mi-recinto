@@ -28,7 +28,7 @@ interface Adicional {
 
 export default function ClientMenu() {
   const [platos, setPlatos] = useState<Plato[]>([]);
-  const [mesa, setMesa] = useState<string>('');
+  const [mesa, setMesa] = useState<string>(''); // Este estado guardará el número de mesa O el nombre del cliente
   const [mesera, setMesera] = useState<string>('');
   const [carrito, setCarrito] = useState<CarritoItem[]>([]);
   const [tipoEntrega, setTipoEntrega] = useState<'servirse' | 'llevar'>('servirse');
@@ -39,16 +39,13 @@ export default function ClientMenu() {
   const [descAdicional, setDescAdicional] = useState('');
   const [precioAdicional, setPrecioAdicional] = useState('');
 
-  // Estado para el banner/check de notificación en el centro de la pantalla
   const [notificacion, setNotificacion] = useState<{ visible: boolean; mensaje: string }>({ visible: false, mensaje: '' });
 
-  // Estados para el configurador de la Tonga
   const [configurandoTonga, setConfigurandoTonga] = useState(false);
   const [pasoTonga, setPasoTonga] = useState<'gallina' | 'presa'>('gallina');
   const [tongaSeleccionada, setTongaSeleccionada] = useState<Plato | null>(null);
   const [tipoGallina, setTipoGallina] = useState<string>('');
 
-  // Estados dinámicos para el Almuerzo del Día
   const [configurandoAlmuerzo, setConfigurandoAlmuerzo] = useState(false);
   const [almuerzoSeleccionado, setAlmuerzoSeleccionado] = useState<Plato | null>(null);
   const [pasoAlmuerzo, setPasoAlmuerzo] = useState<'tipo' | 'segundo' | 'caldo'>('tipo');
@@ -56,20 +53,16 @@ export default function ClientMenu() {
   const [almuerzoPrecio, setAlmuerzoPrecio] = useState<number>(3.00);
   const [segundoElegido, setSegundoElegido] = useState<string>('');
 
-  // Control del modal de confirmación central
   const [mostrarConfirmarModal, setMostrarConfirmarModal] = useState(false);
-
   const [enviando, setEnviando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState(false);
 
   const listadoMeseras = ['Claudia', 'Carolina', 'Sofia', 'Maria', 'Esperanza'];
 
-  // Función auxiliar para disparar la animación del check central
   const mostrarCheckCentral = (texto: string) => {
     setNotificacion({ visible: true, mensaje: texto });
   };
 
-  // Limpia automáticamente la notificación después de 1.5 segundos
   useEffect(() => {
     if (notificacion.visible) {
       const timer = setTimeout(() => {
@@ -134,6 +127,15 @@ export default function ClientMenu() {
       }
     }
     inicializarMenu();
+
+    const canal = supabase
+      .channel('cambios-menu-cliente')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'platos' }, () => inicializarMenu())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
   }, []);
 
   const handleAgregarClick = (plato: Plato) => {
@@ -266,7 +268,11 @@ export default function ClientMenu() {
 
   const revisarPedidoAntesDeConfirmar = () => {
     if (!mesera) return alert('Por favor, selecciona tu nombre de mesera en el banner superior.');
-    if (!mesa.trim()) return alert('Por favor, ingresa tu número de mesa o identificador.');
+    
+    // MODIFICADO: Alerta contextualizada según el modo seleccionado
+    if (!mesa.trim()) {
+      return alert(tipoEntrega === 'llevar' ? 'Por favor, ingresa el nombre del cliente para llevar.' : 'Por favor, ingresa tu número de mesa.');
+    }
     if (carrito.length === 0 && adicionales.length === 0) return alert('El pedido está vacío.');
 
     setMostrarConfirmarModal(true);
@@ -333,7 +339,6 @@ export default function ClientMenu() {
   const opcionesSegundos = platos.filter(p => p.categoria === 'segundo');
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
 
-  // Cargamos de Supabase de forma dinámica las opciones activas/disponibles para la Tonga
   const opcionesGallinaTonga = platos.filter(p => p.categoria === 'tonga_gallina');
   const opcionesPresaTonga = platos.filter(p => p.categoria === 'tonga_presa');
 
@@ -403,7 +408,10 @@ export default function ClientMenu() {
           <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 w-full sm:w-auto shadow-sm">
             <button 
               type="button" 
-              onClick={() => setTipoEntrega('servirse')} 
+              onClick={() => {
+                setTipoEntrega('servirse');
+                setMesa(''); // Limpia el campo al cambiar de pestaña
+              }} 
               className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${tipoEntrega === 'servirse' ? 'bg-white text-emerald-950 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
             >
               <UtensilsCrossed className="h-3.5 w-3.5" />
@@ -411,7 +419,10 @@ export default function ClientMenu() {
             </button>
             <button 
               type="button" 
-              onClick={() => setTipoEntrega('llevar')} 
+              onClick={() => {
+                setTipoEntrega('llevar');
+                setMesa(''); // Limpia el campo al cambiar de pestaña
+              }} 
               className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${tipoEntrega === 'llevar' ? 'bg-emerald-700 text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
             >
               <Bike className="h-3.5 w-3.5" />
@@ -531,7 +542,7 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* MODAL CONFIGURADOR TONGA COMPROBANDO AGOTADOS */}
+        {/* MODAL CONFIGURADOR TONGA */}
         {configurandoTonga && (
           <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4">
             <div className="flex justify-between items-center border-b border-emerald-100 pb-3">
@@ -542,60 +553,47 @@ export default function ClientMenu() {
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">1. Tipo de gallina</p>
                 <div className="grid grid-cols-2 gap-3">
-                  {opcionesGallinaTonga.length === 0 ? (
-                    // Respaldo estático si no se han cargado en la base de datos
-                    ['Gallina Criolla', 'Gallina de Granja'].map((g) => (
-                      <button key={g} onClick={() => { setTipoGallina(g); setPasoTonga('presa'); }} className="p-3.5 bg-white border border-gray-200 rounded-xl font-medium text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30 transition flex items-center justify-between text-sm shadow-sm"><span>{g}</span><ChevronRight className="h-4 w-4 text-emerald-700" /></button>
-                    ))
-                  ) : (
-                    opcionesGallinaTonga.map((g) => (
-                      <button 
-                        key={g.id} 
-                        disabled={!g.disponible}
-                        onClick={() => { setTipoGallina(g.nombre); setPasoTonga('presa'); }} 
-                        className={`p-3.5 border rounded-xl font-medium flex items-center justify-between text-sm shadow-sm transition-all ${
-                          g.disponible 
-                            ? 'bg-white text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30' 
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span>{g.nombre}</span>
-                          {!g.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
-                        </span>
-                        {g.disponible && <ChevronRight className="h-4 w-4 text-emerald-700" />}
-                      </button>
-                    ))
-                  )}
+                  {opcionesGallinaTonga.map((g) => (
+                    <button 
+                      key={g.id} 
+                      disabled={!g.disponible}
+                      onClick={() => { setTipoGallina(g.nombre); setPasoTonga('presa'); }} 
+                      className={`p-3.5 border rounded-xl font-medium flex items-center justify-between text-sm shadow-sm transition-all ${
+                        g.disponible 
+                          ? 'bg-white text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30' 
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span>{g.nombre}</span>
+                        {!g.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
+                      </span>
+                      {g.disponible && <ChevronRight className="h-4 w-4 text-emerald-700" />}
+                    </button>
+                  ))}
                 </div>
               </div>
             ) : (
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">2. Presa favorita</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {opcionesPresaTonga.length === 0 ? (
-                    ['Pechuga', 'Pospierna', 'Palizada', 'Muslo'].map((p) => (
-                      <button key={p} onClick={() => finalizarTonga(p)} className="p-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white hover:border-emerald-700 transition text-center text-sm shadow-sm">{p}</button>
-                    ))
-                  ) : (
-                    opcionesPresaTonga.map((p) => (
-                      <button 
-                        key={p.id} 
-                        disabled={!p.disponible}
-                        onClick={() => finalizarTonga(p.nombre)} 
-                        className={`p-3 border rounded-xl font-bold text-center text-sm shadow-sm transition-all ${
-                          p.disponible 
-                            ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                        }`}
-                      >
-                        <span className="flex flex-col items-center justify-center gap-1">
-                          <span>{p.nombre}</span>
-                          {!p.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase block">Agotado</span>}
-                        </span>
-                      </button>
-                    ))
-                  )}
+                  {opcionesPresaTonga.map((p) => (
+                    <button 
+                      key={p.id} 
+                      disabled={!p.disponible}
+                      onClick={() => finalizarTonga(p.nombre)} 
+                      className={`p-3 border rounded-xl font-bold text-center text-sm shadow-sm transition-all ${
+                        p.disponible 
+                          ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      <span className="flex flex-col items-center justify-center gap-1">
+                        <span>{p.nombre}</span>
+                        {!p.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase block">Agotado</span>}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -666,9 +664,19 @@ export default function ClientMenu() {
       {/* CARRITO LATERAL */}
       <div className="border border-gray-200 rounded-2xl p-5 bg-gray-50 h-fit space-y-5">
         <div className="flex items-center space-x-2 border-b border-gray-200 pb-3"><ShoppingCart className="h-5 w-5 text-emerald-800" /><h2 className="text-lg font-bold text-gray-950">Tu Pedido</h2></div>
+        
+        {/* MODIFICADO: Label e Input dinámicos en base al tipo de entrega */}
         <div>
-          <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Mesa / Identificador</label>
-          <input type="text" placeholder="Ej. Mesa 4" value={mesa} onChange={(e) => setMesa(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm" />
+          <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+            {tipoEntrega === 'llevar' ? 'Nombre del Cliente / Identificador' : 'Mesa / Identificador'}
+          </label>
+          <input 
+            type="text" 
+            placeholder={tipoEntrega === 'llevar' ? 'Ej. Juan Pérez' : 'Ej. Mesa 4'} 
+            value={mesa} 
+            onChange={(e) => setMesa(e.target.value)} 
+            className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm" 
+          />
         </div>
 
         <div className="divide-y divide-gray-200/60 max-h-60 overflow-y-auto pr-1">
@@ -734,8 +742,12 @@ export default function ClientMenu() {
               </div>
             </div>
 
+            {/* MODIFICADO: Label de confirmación dinámico en el resumen */}
             <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 grid grid-cols-2 gap-2 text-xs font-bold">
-              <p className="text-gray-500">Mesa / Identificador: <span className="text-gray-950 block text-sm uppercase font-black mt-0.5">{mesa}</span></p>
+              <p className="text-gray-500">
+                {tipoEntrega === 'llevar' ? 'Cliente (Para Llevar):' : 'Mesa / Identificador:'} 
+                <span className="text-gray-950 block text-sm uppercase font-black mt-0.5">{mesa}</span>
+              </p>
               <p className="text-gray-500">Atendido por: <span className="text-emerald-800 block text-sm uppercase font-black mt-0.5">{mesera || 'No seleccionada'}</span></p>
             </div>
 
