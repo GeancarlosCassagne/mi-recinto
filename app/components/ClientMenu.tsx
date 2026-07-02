@@ -39,6 +39,9 @@ export default function ClientMenu() {
   const [descAdicional, setDescAdicional] = useState('');
   const [precioAdicional, setPrecioAdicional] = useState('');
 
+  // Estado para el banner/check de notificación en el centro de la pantalla
+  const [notificacion, setNotificacion] = useState<{ visible: boolean; mensaje: string }>({ visible: false, mensaje: '' });
+
   // Estados para el configurador de la Tonga
   const [configurandoTonga, setConfigurandoTonga] = useState(false);
   const [pasoTonga, setPasoTonga] = useState<'gallina' | 'presa'>('gallina');
@@ -60,6 +63,21 @@ export default function ClientMenu() {
   const [mensajeExito, setMensajeExito] = useState(false);
 
   const listadoMeseras = ['Claudia', 'Carolina', 'Sofia', 'Maria', 'Esperanza'];
+
+  // Función auxiliar para disparar la animación del check central
+  const mostrarCheckCentral = (texto: string) => {
+    setNotificacion({ visible: true, mensaje: texto });
+  };
+
+  // Limpia automáticamente la notificación después de 1.5 segundos
+  useEffect(() => {
+    if (notificacion.visible) {
+      const timer = setTimeout(() => {
+        setNotificacion({ visible: false, mensaje: '' });
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [notificacion.visible]);
 
   useEffect(() => {
     async function inicializarMenu() {
@@ -136,6 +154,8 @@ export default function ClientMenu() {
   };
 
   const agregarAlCarritoNormal = (plato: Plato) => {
+    mostrarCheckCentral('Seleccionado');
+
     setCarrito((prev) => {
       const existe = prev.find((item) => item.plato.id === plato.id && !item.detallesPersonalizados);
       if (existe) {
@@ -149,6 +169,8 @@ export default function ClientMenu() {
 
   const finalizarTonga = (presa: string) => {
     if (!tongaSeleccionada) return;
+
+    mostrarCheckCentral('Seleccionado');
 
     const detalles = `${tipoGallina} (${presa})`;
     const idUnico = `${tongaSeleccionada.id}-${detalles.replace(/\s+/g, '-')}`;
@@ -186,6 +208,8 @@ export default function ClientMenu() {
 
   const finalizarAlmuerzo = (sopaOBebida: string) => {
     if (!almuerzoSeleccionado) return;
+
+    mostrarCheckCentral('Añadido');
 
     let detalles = '';
     const tagLlevar = tipoEntrega === 'llevar' ? ' [TARRINA]' : '';
@@ -304,28 +328,22 @@ export default function ClientMenu() {
     }
   };
 
-  // Clasificación interna limpia para los pasos de selección del Almuerzo
   const opcionesSegundos = platos.filter(p => p.categoria === 'segundo');
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
 
-  // FILTROS DE RENDERIZADO VISUAL EN LA CARTA:
-  // 1. Extraemos el Almuerzo del Día para su Banner individual arriba
   const platoAlmuerzoDelDia = platos.find(p => p.nombre.toLowerCase().includes('almuerzo del día'));
   
-  // 2. CORREGIDO: Filtramos y ordenamos la lista de abajo de forma estricta
   const restoDePlatosCatalogo = platos
     .filter(p => {
       const n = p.nombre.toLowerCase();
-      // Ocultamos segundos, caldos y el almuerzo del día de la lista general
       return p.categoria !== 'segundo' && p.categoria !== 'caldo' && !n.includes('almuerzo del día');
     })
     .sort((a, b) => {
       const nameA = a.nombre.toLowerCase();
       const nameB = b.nombre.toLowerCase();
-      // Forzamos a que la Tonga siempre se posicione primero (índice menor)
       if (nameA.includes('tonga')) return -1;
       if (nameB.includes('tonga')) return 1;
-      return 0; // Las colas, aguas y jugos se ordenan por defecto abajo
+      return 0;
     });
 
   if (cajaCerradaHoy) {
@@ -354,7 +372,16 @@ export default function ClientMenu() {
         </div>
         <div className="flex flex-wrap gap-2 justify-center">
           {listadoMeseras.map((m) => (
-            <button key={m} onClick={() => setMesera(m)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${mesera === m ? 'bg-emerald-700 text-white shadow-md scale-105' : 'bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-100/40'}`}>{m}</button>
+            <button 
+              key={m} 
+              onClick={() => { 
+                setMesera(m); 
+                mostrarCheckCentral('Seleccionado');
+              }} 
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${mesera === m ? 'bg-emerald-700 text-white shadow-md scale-105' : 'bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-100/40'}`}
+            >
+              {m}
+            </button>
           ))}
         </div>
       </div>
@@ -423,6 +450,7 @@ export default function ClientMenu() {
                     opcionesSegundos.map((s) => (
                       <button 
                         key={s.id} 
+                        disabled={!s.disponible}
                         onClick={() => { 
                           if (tipoAlmuerzo === 'completo') { 
                             setSegundoElegido(s.nombre);
@@ -444,12 +472,20 @@ export default function ClientMenu() {
 
                             setConfigurandoAlmuerzo(false);
                             setAlmuerzoSeleccionado(null);
+                            mostrarCheckCentral('Añadido');
                           } 
                         }} 
-                        className="p-3 bg-white border rounded-xl font-semibold text-gray-900 hover:bg-emerald-50/50 text-left text-xs uppercase flex justify-between items-center shadow-sm"
+                        className={`p-3 border rounded-xl font-semibold text-left text-xs uppercase flex justify-between items-center shadow-sm transition-all ${
+                          s.disponible 
+                            ? 'bg-white text-gray-900 hover:bg-emerald-50/50' 
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                        }`}
                       >
-                        <span>{s.nombre}</span>
-                        <ChevronRight className="h-4 w-4 text-emerald-700" />
+                        <span className="flex items-center gap-2">
+                          <span>{s.nombre}</span>
+                          {!s.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
+                        </span>
+                        {s.disponible && <ChevronRight className="h-4 w-4 text-emerald-700" />}
                       </button>
                     ))
                   )}
@@ -466,7 +502,21 @@ export default function ClientMenu() {
                     <button onClick={() => finalizarAlmuerzo('Sin sopa (Solo Bebida)')} className="p-3 bg-white border rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white transition text-center text-xs shadow-sm">No hay caldos hoy (Pasar directo)</button>
                   ) : (
                     opcionesCaldos.map((c) => (
-                      <button key={c.id} onClick={() => finalizarAlmuerzo(c.nombre)} className="p-3 bg-white border rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white transition text-center text-xs uppercase shadow-sm">{c.nombre}</button>
+                      <button 
+                        key={c.id} 
+                        disabled={!c.disponible}
+                        onClick={() => finalizarAlmuerzo(c.nombre)} 
+                        className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
+                          c.disponible 
+                            ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                        }`}
+                      >
+                        <span className="flex items-center justify-center gap-2">
+                          <span>{c.nombre}</span>
+                          {!c.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
+                        </span>
+                      </button>
                     ))
                   )}
                 </div>
@@ -537,7 +587,7 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* RESTO DEL CATÁLOGO REORDENADO (TONGA PRIMERO, LUEGO BEBIDAS Y JUGOS) */}
+        {/* RESTO DEL CATÁLOGO REORDENADO */}
         <div className="space-y-4">
           <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest pl-1">Carta y Adicionales</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -670,6 +720,16 @@ export default function ClientMenu() {
               <button onClick={enviarPedidoDefinitivoASupabase} className="w-1/2 bg-emerald-700 text-white py-3 rounded-xl hover:bg-emerald-800 shadow-sm transition">Sí, Confirmar</button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* POPUP FLOTANTE CENTRAL PARA LOS CHECKS DE CONFIRMACIÓN */}
+      {notificacion.visible && (
+        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl px-8 py-6 shadow-2xl flex flex-col items-center space-y-3 animate-in zoom-in-95 duration-150 text-white">
+            <CheckCircle className="h-14 w-14 text-emerald-500 animate-bounce" />
+            <span className="text-lg font-black tracking-wide uppercase">{notificacion.mensaje}</span>
           </div>
         </div>
       )}
