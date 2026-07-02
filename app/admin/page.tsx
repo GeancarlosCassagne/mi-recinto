@@ -9,7 +9,7 @@ interface Plato {
   nombre: string;
   precio: number;
   disponible: boolean;
-  categoria: string; // "segundo" | "caldo" | "fijo"
+  categoria: string;
 }
 
 interface DetallePedido {
@@ -49,7 +49,6 @@ export default function AdminPage() {
 
   const obtenerMenuDelDia = async (fecha: string) => {
     const { data } = await supabase.from('menu_diario').select('plato_id').eq('fecha', fecha);
-    // CORREGIDO: Si no hay registros para ese día, la lista se vacía por completo automáticamente
     if (data) {
       setPlatosSeleccionados(data.map(m => m.plato_id));
     } else {
@@ -61,7 +60,6 @@ export default function AdminPage() {
     const { data: datosCaja } = await supabase.from('cajas').select('estado').eq('fecha', fecha).maybeSingle();
     setEstadoCaja(datosCaja?.estado || 'abierta');
 
-    // CORREGIDO: Filtro estricto gte y lte por fecha seleccionada para aislar las comandas históricas
     const { data: datosPedidos } = await supabase
       .from('pedidos')
       .select(`id, mesa, total, estado, created_at, detalles_pedido (cantidad, platos (nombre))`)
@@ -72,7 +70,7 @@ export default function AdminPage() {
     if (datosPedidos) {
       setPedidosDia(datosPedidos as unknown as Pedido[]);
     } else {
-      setPedidosDia([]); // Si es un nuevo día, las ventas se van a 0 automáticamente
+      setPedidosDia([]);
     }
   };
 
@@ -147,6 +145,8 @@ export default function AdminPage() {
   const esPlatoFijoInmutable = (nombrePlato: string, catPlato: string) => {
     const n = nombrePlato.toLowerCase();
     return catPlato === 'fijo' || 
+           catPlato === 'tonga_gallina' ||
+           catPlato === 'tonga_presa' ||
            n.includes('tonga') || 
            n.includes('almuerzo del día') || 
            n.includes('cola pequeña') || 
@@ -213,8 +213,11 @@ export default function AdminPage() {
     return { numeroMesa, nombreMesera, listaExtras };
   };
 
-  // CORREGIDO: Las ventas calculan dinámicamente sumando solo las comandas de la fecha cargada en pantalla
   const totalRecaudado = pedidosDia.filter(p => p.estado === 'entregado').reduce((acc, p) => acc + Number(p.total), 0);
+
+  // Filtramos la lista principal eliminando los componentes específicos internos de la Tonga
+  const platosPlanificadorVisibles = platos.filter(p => p.categoria !== 'tonga_gallina' && p.categoria !== 'tonga_presa');
+  const componentesTongaInternos = platos.filter(p => p.categoria === 'tonga_gallina' || p.categoria === 'tonga_presa');
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-6 grid grid-cols-1 md:grid-cols-3 gap-8 w-full text-gray-900 max-w-7xl mx-auto">
@@ -234,23 +237,49 @@ export default function AdminPage() {
       </div>
 
       {/* FORMULARIO ADICIÓN PLATO */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 h-fit shadow-sm">
-        <h2 className="text-lg font-bold pb-4 border-b mb-5 flex items-center gap-2"><PlusCircle className="text-emerald-700 h-5 w-5" /> Registrar Plato Base</h2>
-        <form onSubmit={guardarPlato} className="space-y-4">
-          <div><label className="block text-xs font-bold text-gray-500 mb-1">Nombre del Plato</label><input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. Ceviche" /></div>
-          <div><label className="block text-xs font-bold text-gray-500 mb-1">Precio Unitario (USD)</label><input type="text" value={precio} onChange={(e) => setPrecio(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. 5.00" /></div>
-          
-          <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Tipo / Categoría de Plato</label>
-            <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700 font-medium text-gray-800">
-              <option value="segundo">🥩 Segundo (Plato Fuerte)</option>
-              <option value="caldo">🥣 Caldo / Sopa</option>
-              <option value="fijo">🥤 Fijo (Tonga, Almuerzo del Día, Bebidas)</option>
-            </select>
-          </div>
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 h-fit shadow-sm space-y-6">
+        <div>
+          <h2 className="text-lg font-bold pb-4 border-b mb-5 flex items-center gap-2"><PlusCircle className="text-emerald-700 h-5 w-5" /> Registrar Plato Base</h2>
+          <form onSubmit={guardarPlato} className="space-y-4">
+            <div><label className="block text-xs font-bold text-gray-500 mb-1">Nombre del Plato</label><input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. Ceviche" /></div>
+            <div><label className="block text-xs font-bold text-gray-500 mb-1">Precio Unitario (USD)</label><input type="text" value={precio} onChange={(e) => setPrecio(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. 5.00" /></div>
+            
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Tipo / Categoría de Plato</label>
+              <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700 font-medium text-gray-800">
+                <option value="segundo">🥩 Segundo (Plato Fuerte)</option>
+                <option value="caldo">🥣 Caldo / Sopa</option>
+                <option value="fijo">🥤 Fijo (Tonga, Almuerzo del Día, Bebidas)</option>
+              </select>
+            </div>
 
-          <button type="submit" className="w-full bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl shadow-sm hover:bg-emerald-800 transition">Guardar en Banco General</button>
-        </form>
+            <button type="submit" className="w-full bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl shadow-sm hover:bg-emerald-800 transition">Guardar en Banco General</button>
+          </form>
+        </div>
+
+        {/* NUEVO APARTADO: CONTROL DISPONIBILIDAD INGREDIENTES TONGA */}
+        <div className="border-t pt-5">
+          <h3 className="text-sm font-black text-gray-400 uppercase tracking-wider mb-3">Disponibilidad de Tonga</h3>
+          <div className="bg-slate-50 rounded-xl p-3 border space-y-2 max-h-[220px] overflow-y-auto">
+            {componentesTongaInternos.map((comp) => (
+              <div key={comp.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-lg border shadow-sm">
+                <div>
+                  <p className="font-bold text-gray-900 capitalize">{comp.nombre}</p>
+                  <span className="text-[9px] text-gray-400 font-medium block">{comp.categoria === 'tonga_gallina' ? '🐓 Tipo Gallina' : '🍗 Presa'}</span>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => alternarDisponibilidad(comp.id, comp.disponible)}
+                  className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                    comp.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                  }`}
+                >
+                  {comp.disponible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* PLANIFICADOR MENÚ DIARIO */}
@@ -260,8 +289,8 @@ export default function AdminPage() {
             <h2 className="text-lg font-bold">Planificador del Menú del Día</h2>
             <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold px-2.5 py-1 rounded-md uppercase">Índice Activo</span>
           </div>
-          <div className="divide-y divide-gray-100 max-h-[350px] overflow-y-auto pr-1 pb-3 px-2">
-            {platos.map((plato) => {
+          <div className="divide-y divide-gray-100 max-h-[420px] overflow-y-auto pr-1 pb-3 px-2">
+            {platosPlanificadorVisibles.map((plato) => {
               const esFijo = esPlatoFijoInmutable(plato.nombre, plato.categoria);
               const marcado = esFijo || platosSeleccionados.includes(plato.id);
 
@@ -281,7 +310,6 @@ export default function AdminPage() {
                     </button>
                     <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-sm capitalize text-gray-950 truncate">{plato.nombre}</h4>
-                      
                       <div className="mt-1 flex items-center space-x-1">
                         <select 
                           value={plato.categoria || 'segundo'} 

@@ -111,6 +111,8 @@ export default function ClientMenu() {
         const platosFiltrados = todosLosPlatos.filter(plato => {
           const nombreLimpio = plato.nombre.toLowerCase();
           const esFijo = plato.categoria === 'fijo' ||
+                         plato.categoria === 'tonga_gallina' ||
+                         plato.categoria === 'tonga_presa' ||
                          nombreLimpio.includes('tonga') || 
                          nombreLimpio.includes('almuerzo del día') || 
                          nombreLimpio.includes('cola pequeña') || 
@@ -331,12 +333,16 @@ export default function ClientMenu() {
   const opcionesSegundos = platos.filter(p => p.categoria === 'segundo');
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
 
+  // Cargamos de Supabase de forma dinámica las opciones activas/disponibles para la Tonga
+  const opcionesGallinaTonga = platos.filter(p => p.categoria === 'tonga_gallina');
+  const opcionesPresaTonga = platos.filter(p => p.categoria === 'tonga_presa');
+
   const platoAlmuerzoDelDia = platos.find(p => p.nombre.toLowerCase().includes('almuerzo del día'));
   
   const restoDePlatosCatalogo = platos
     .filter(p => {
       const n = p.nombre.toLowerCase();
-      return p.categoria !== 'segundo' && p.categoria !== 'caldo' && !n.includes('almuerzo del día');
+      return p.categoria !== 'segundo' && p.categoria !== 'caldo' && p.categoria !== 'tonga_gallina' && p.categoria !== 'tonga_presa' && !n.includes('almuerzo del día');
     })
     .sort((a, b) => {
       const nameA = a.nombre.toLowerCase();
@@ -525,7 +531,7 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* MODAL CONFIGURADOR TONGA */}
+        {/* MODAL CONFIGURADOR TONGA COMPROBANDO AGOTADOS */}
         {configurandoTonga && (
           <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4">
             <div className="flex justify-between items-center border-b border-emerald-100 pb-3">
@@ -536,18 +542,60 @@ export default function ClientMenu() {
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">1. Tipo de gallina</p>
                 <div className="grid grid-cols-2 gap-3">
-                  {['Gallina Criolla', 'Gallina de Granja'].map((g) => (
-                    <button key={g} onClick={() => { setTipoGallina(g); setPasoTonga('presa'); }} className="p-3.5 bg-white border border-gray-200 rounded-xl font-medium text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30 transition flex items-center justify-between text-sm shadow-sm"><span>{g}</span><ChevronRight className="h-4 w-4 text-emerald-700" /></button>
-                  ))}
+                  {opcionesGallinaTonga.length === 0 ? (
+                    // Respaldo estático si no se han cargado en la base de datos
+                    ['Gallina Criolla', 'Gallina de Granja'].map((g) => (
+                      <button key={g} onClick={() => { setTipoGallina(g); setPasoTonga('presa'); }} className="p-3.5 bg-white border border-gray-200 rounded-xl font-medium text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30 transition flex items-center justify-between text-sm shadow-sm"><span>{g}</span><ChevronRight className="h-4 w-4 text-emerald-700" /></button>
+                    ))
+                  ) : (
+                    opcionesGallinaTonga.map((g) => (
+                      <button 
+                        key={g.id} 
+                        disabled={!g.disponible}
+                        onClick={() => { setTipoGallina(g.nombre); setPasoTonga('presa'); }} 
+                        className={`p-3.5 border rounded-xl font-medium flex items-center justify-between text-sm shadow-sm transition-all ${
+                          g.disponible 
+                            ? 'bg-white text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30' 
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span>{g.nombre}</span>
+                          {!g.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
+                        </span>
+                        {g.disponible && <ChevronRight className="h-4 w-4 text-emerald-700" />}
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             ) : (
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">2. Presa favorita</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {['Pechuga', 'Pospierna', 'Palizada', 'Muslo'].map((p) => (
-                    <button key={p} onClick={() => finalizarTonga(p)} className="p-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white hover:border-emerald-700 transition text-center text-sm shadow-sm">{p}</button>
-                  ))}
+                  {opcionesPresaTonga.length === 0 ? (
+                    ['Pechuga', 'Pospierna', 'Palizada', 'Muslo'].map((p) => (
+                      <button key={p} onClick={() => finalizarTonga(p)} className="p-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white hover:border-emerald-700 transition text-center text-sm shadow-sm">{p}</button>
+                    ))
+                  ) : (
+                    opcionesPresaTonga.map((p) => (
+                      <button 
+                        key={p.id} 
+                        disabled={!p.disponible}
+                        onClick={() => finalizarTonga(p.nombre)} 
+                        className={`p-3 border rounded-xl font-bold text-center text-sm shadow-sm transition-all ${
+                          p.disponible 
+                            ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                        }`}
+                      >
+                        <span className="flex flex-col items-center justify-center gap-1">
+                          <span>{p.nombre}</span>
+                          {!p.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase block">Agotado</span>}
+                        </span>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             )}
