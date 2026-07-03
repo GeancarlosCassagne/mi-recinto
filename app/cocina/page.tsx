@@ -40,7 +40,7 @@ export default function CocinaPage() {
   useEffect(() => {
     obtenerPedidosDelDia();
     
-    // Canal en tiempo real para recibir comandas y modificaciones de platos al instante
+    // Canal en tiempo real para recibir pedidos y modificaciones de platos al instante
     const canalCocina = supabase
       .channel('realtime-cocina-flow')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => obtenerPedidosDelDia())
@@ -100,7 +100,7 @@ export default function CocinaPage() {
       {pedidos.length === 0 ? (
         <div className="h-[70vh] flex flex-col items-center justify-center text-slate-500 italic text-sm">
           <Clock className="h-10 w-10 text-slate-700 mb-2 animate-pulse" />
-          <span>No se registran comandas en el sistema para el día de hoy.</span>
+          <span>No se registran pedidos en el sistema para el día de hoy.</span>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -122,7 +122,7 @@ export default function CocinaPage() {
                   {estaDespachado ? (
                     <div className="bg-slate-700 text-slate-300 font-black text-xs uppercase px-4 py-2.5 tracking-wider flex items-center justify-center gap-2 shadow-inner">
                       <CheckCircle className="h-4 w-4" />
-                      <span>Comanda Completada / Despachada</span>
+                      <span>Pedido Completado / Despachado</span>
                     </div>
                   ) : esParaLlevar ? (
                     <div className="bg-rose-600 text-white font-black text-sm uppercase px-4 py-3 tracking-wider flex items-center justify-center gap-2 shadow-inner animate-pulse">
@@ -187,7 +187,7 @@ export default function CocinaPage() {
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase py-3.5 rounded-xl transition flex items-center justify-center gap-1.5 tracking-wider shadow-md focus:outline-none"
                     >
                       <CheckCircle className="h-4 w-4 stroke-[3]" />
-                      <span>Despachar Comanda</span>
+                      <span>Despachar Pedido</span>
                     </button>
                   )}
                 </div>
@@ -209,8 +209,8 @@ export default function CocinaPage() {
               <div className="flex items-center space-x-3 text-amber-500 border-b border-slate-700 pb-3">
                 <AlertTriangle className="h-6 w-6 shrink-0 text-amber-500" />
                 <div>
-                  <h3 className="text-base font-black tracking-tight">¿Confirmar despacho de orden?</h3>
-                  <p className="text-xs text-slate-400 font-medium">Revisa los components de la comanda antes de sacarla</p>
+                  <h3 className="text-base font-black tracking-tight">¿Confirmar despacho de pedido?</h3>
+                  <p className="text-xs text-slate-400 font-medium">Revisa los componentes del pedido antes de sacarlo</p>
                 </div>
               </div>
 
@@ -266,7 +266,7 @@ export default function CocinaPage() {
                   onClick={ejecutarDespacho}
                   className="w-1/2 bg-emerald-600 text-white py-3 rounded-xl hover:bg-emerald-700 shadow-md transition"
                 >
-                  Sí, Despachar
+                  Sí, Despachar Pedido
                 </button>
               </div>
 
@@ -279,7 +279,7 @@ export default function CocinaPage() {
   );
 }
 
-function especificacionesTexto(spec: string[]) {
+function templatesTexto(spec: string[]) {
   return spec.map((item, index) => (
     <p key={index} className="text-xs text-amber-100/90 font-bold capitalize leading-relaxed pl-2.5 border-l-2 border-amber-500/40">
       {item}
