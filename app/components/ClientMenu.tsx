@@ -154,20 +154,50 @@ export default function ClientMenu() {
       setTipoEntrega('servirse');
       if (textoMesa.includes('[TIPO:SERVIR]')) textoMesa = textoMesa.replace('[TIPO:SERVIR]', '').trim();
     }
+    
+    // Extraemos las especificaciones del string general guardado para reinyectarlas a la interfaz
+    let especificacionExtra = '';
+    if (textoMesa.includes('Especificaciones:')) {
+      especificacionExtra = textoMesa.split('Especificaciones:')[1].replace(']', '').trim();
+    }
+    
     textoMesa = textoMesa.split('[MESERA:')[0].trim();
     setMesa(textoMesa);
 
-    const itemsCargados = pedido.detalles_pedido.map((det: any) => ({
-      idUnico: det.plato_id,
-      plato: {
-        id: det.plato_id,
-        nombre: det.platos.nombre,
-        precio: det.precio_unitario,
-        disponible: true,
-        categoria: 'fijo'
-      },
-      grid: det.cantidad
-    }));
+    // Separamos las especificaciones por comas si hay múltiples almuerzos o combinaciones en la misma orden
+    const combinacionesGuardadas = especificacionExtra.split(',').map(s => s.trim());
+
+    const itemsCargados = pedido.detalles_pedido.map((det: any, index: number) => {
+      // Buscamos si este plato tiene una combinación específica guardada en la cabecera
+      const coincidencia = combinacionesGuardadas.find(c => c.includes(det.platos.nombre));
+      let detalles = undefined;
+      
+      if (coincidencia) {
+        // Extraemos lo que está dentro de los paréntesis: "Almuerzo Del Día (Completo: ...)" -> "Completo: ..."
+        const match = coincidencia.match(/\(([^)]+)\)/);
+        if (match && match[1]) {
+          detalles = match[1];
+        }
+      }
+
+      // Generamos un idUnico consistente para que el contador de cantidad y variantes funcione sin cruzarse
+      const idUnico = detalles 
+        ? `${det.plato_id}-${detalles.replace(/\s+/g, '-')}` 
+        : `${det.plato_id}-${index}`;
+
+      return {
+        idUnico,
+        plato: {
+          id: det.plato_id,
+          nombre: det.platos.nombre,
+          precio: det.precio_unitario,
+          disponible: true,
+          categoria: 'fijo'
+        },
+        grid: det.cantidad,
+        detallesPersonalizados: detalles
+      };
+    });
 
     setCarrito(itemsCargados);
     setIdPedidoAEditar(pedido.id);
