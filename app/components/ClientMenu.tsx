@@ -913,24 +913,76 @@ export default function ClientMenu() {
               <h3 className="text-base font-black text-gray-950">Seleccionar Comanda para Modificar</h3>
               <button onClick={() => setMostrarListaModificar(false)} className="text-xs font-bold text-gray-400 hover:text-gray-600">X</button>
             </div>
-            <div className="max-h-60 overflow-y-auto space-y-2 pr-1 divide-y divide-gray-100">
+            
+            <div className="max-h-80 overflow-y-auto space-y-3 pr-1 divide-y divide-gray-100">
               {pedidosActivos.length === 0 ? (
                 <p className="text-center text-gray-400 text-xs py-4 italic">No hay comandas pendientes en cocina hoy.</p>
               ) : (
                 pedidosActivos.map((ped) => {
-                  const labelMesa = ped.mesa.includes('[TIPO:LLEVAR]') ? ped.mesa.split('[TIPO:LLEVAR]')[1].split('[MESERA:')[0].trim() : ped.mesa.split('[TIPO:SERVIR]')[1]?.split('[MESERA:')[0].trim() || ped.mesa;
+                  // 1. Extraemos limpiamente el número de mesa o cliente
+                  let labelMesa = ped.mesa.includes('[TIPO:LLEVAR]') 
+                    ? ped.mesa.split('[TIPO:LLEVAR]')[1].split('[MESERA:')[0].trim() 
+                    : ped.mesa.split('[TIPO:SERVIR]')[1]?.split('[MESERA:')[0].trim() || ped.mesa;
+                  if (labelMesa.includes('[EXTRA:')) labelMesa = labelMesa.split('[EXTRA:')[0].trim();
+                  if (labelMesa.includes('Especificaciones:')) labelMesa = labelMesa.split('Especificaciones:')[0].trim();
+
+                  // 2. Extraemos el nombre de la mesera asignada a esta orden
+                  let meseraOrden = 'No especificada';
+                  if (ped.mesa.includes('[MESERA:')) {
+                    meseraOrden = ped.mesa.split('[MESERA:')[1].split(']')[0].trim();
+                  }
+
+                  // 3. Extraemos el texto de las especificaciones/combinaciones para listarlas abajo
+                  let especificacionesTexto = '';
+                  if (ped.mesa.includes('Especificaciones:')) {
+                    especificacionesTexto = ped.mesa.split('Especificaciones:')[1].replace(']', '').trim();
+                  }
+
                   return (
-                    <button 
-                      key={ped.id} 
-                      onClick={() => cargarPedidoEnCarrito(ped)}
-                      className="w-full text-left p-3 hover:bg-slate-50 transition rounded-xl flex justify-between items-center text-xs pt-2.5"
-                    >
-                      <div>
-                        <span className="font-black text-gray-950 uppercase block">{ped.mesa.includes('[TIPO:LLEVAR]') ? `Cliente: ${labelMesa}` : `Mesa: ${labelMesa}`}</span>
-                        <span className="text-gray-400 text-[10px]">Total original: ${Number(ped.total).toFixed(2)}</span>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-emerald-700" />
-                    </button>
+                    <div key={ped.id} className="pt-3 first:pt-0">
+                      <button 
+                        onClick={() => {
+                          // Si queremos heredar automáticamente la mesera de la orden original al cargarla:
+                          if (meseraOrden !== 'No especificada') setMesera(meseraOrden);
+                          cargarPedidoEnCarrito(ped);
+                        }}
+                        className="w-full text-left p-3.5 hover:bg-slate-50 transition rounded-xl flex justify-between items-start text-xs bg-gray-50/50 border border-gray-100"
+                      >
+                        <div className="space-y-1.5 w-full pr-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-black text-gray-950 text-sm uppercase">
+                              {ped.mesa.includes('[TIPO:LLEVAR]') ? `🏃‍♂️ Cliente: ${labelMesa}` : `🍽️ Mesa: ${labelMesa}`}
+                            </span>
+                            <span className="font-mono font-black text-emerald-800 text-sm">${Number(ped.total).toFixed(2)}</span>
+                          </div>
+                          
+                          {/* Renderizado de la Mesera Responsable */}
+                          <div className="flex items-center gap-1 text-[11px] text-gray-500 font-medium">
+                            <User className="h-3 w-3 text-emerald-700" />
+                            <span>Atendido por: <strong className="text-gray-700 uppercase font-bold">{meseraOrden}</strong></span>
+                          </div>
+
+                          {/* Detalles resumidos de los platos cargados de la base de datos */}
+                          <div className="space-y-0.5 bg-white border border-gray-100 rounded-lg p-2 mt-1">
+                            <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Composición:</p>
+                            {ped.detalles_pedido?.map((det: any, idx: number) => (
+                              <p key={idx} className="text-xs text-gray-700 font-medium capitalize flex justify-between">
+                                <span>• {det.platos?.nombre}</span>
+                                <span className="font-bold text-gray-400 text-[11px]">x{det.cantidad}</span>
+                              </p>
+                            ))}
+                            
+                            {/* Si tiene especificaciones detalladas de almuerzos (arroz, sopa, etc.) se listan aquí */}
+                            {especificacionesTexto && (
+                              <p className="text-[11px] text-amber-800 font-semibold italic border-t border-dashed mt-1.5 pt-1 capitalize">
+                                📝 {especificacionesTexto}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-emerald-700 shrink-0 self-center" />
+                      </button>
+                    </div>
                   );
                 })
               )}
