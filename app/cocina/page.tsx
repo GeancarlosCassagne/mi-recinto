@@ -65,6 +65,7 @@ export default function CocinaPage() {
     let esParaLlevar = false;
     let mesera = 'No especificada';
     let especificaciones: string[] = [];
+    let adicionales: string[] = [];
 
     if (rawMesa.includes('[TIPO:LLEVAR]')) {
       esParaLlevar = true;
@@ -81,11 +82,16 @@ export default function CocinaPage() {
       const parteEspecificaciones = textoMesa.split('Especificaciones:')[1].replace(']', '').trim();
       especificaciones = parteEspecificaciones.split('|').map(s => s.trim()).filter(Boolean);
     }
+    if (textoMesa.includes('[EXTRA:')) {
+      const parteExtras = textoMesa.split('[EXTRA:')[1].split(']')[0].trim();
+      adicionales = parteExtras.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
     if (rawMesa.includes('[EXTRA:')) {
       rawMesa = rawMesa.split('[EXTRA:')[0].trim();
     }
 
-    return { numeroMesa: rawMesa, esParaLlevar, mesera, especificaciones };
+    return { numeroMesa: rawMesa, esParaLlevar, mesera, especificaciones, adicionales };
   };
 
   return (
@@ -105,7 +111,7 @@ export default function CocinaPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {pedidos.map((p) => {
-            const { numeroMesa, esParaLlevar, mesera, especificaciones } = desglosarCabeceraPedido(p.mesa);
+            const { numeroMesa, esParaLlevar, mesera, especificaciones, adicionales } = desglosarCabeceraPedido(p.mesa);
             const hora = new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const estaDespachado = p.estado === 'entregado';
 
@@ -165,6 +171,18 @@ export default function CocinaPage() {
                       ))}
                     </div>
 
+                    {/* LISTADO DE NOTAS / ADICIONALES DE LA ORDEN */}
+                    {adicionales && adicionales.length > 0 && (
+                      <div className="mt-3 space-y-1">
+                        <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest mb-1">Notas / Adicionales:</p>
+                        {adicionales.map((item, index) => (
+                          <div key={index} className="bg-sky-950/40 border border-sky-900/40 p-2 rounded-xl text-xs font-bold text-sky-300 capitalize">
+                            ➕ {item}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     {especificaciones.length > 0 && (
                       <div className="mt-4 border-t border-dashed border-slate-200/60 pt-3">
                         <div className="flex flex-col gap-1">
@@ -198,9 +216,9 @@ export default function CocinaPage() {
         </div>
       )}
 
-      {/* MODAL CENTRAL DE CONFIRMACIÓN CON DETALLES COMPLETOS CORREGIDO */}
+      {/* MODAL CENTRAL DE CONFIRMACIÓN */}
       {pedidoAConfirmar && (() => {
-        const { numeroMesa, esParaLlevar, mesera, especificaciones } = desglosarCabeceraPedido(pedidoAConfirmar.mesa);
+        const { numeroMesa, esParaLlevar, mesera, especificaciones, adicionales } = desglosarCabeceraPedido(pedidoAConfirmar.mesa);
 
         return (
           <div className="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
@@ -214,7 +232,7 @@ export default function CocinaPage() {
                 </div>
               </div>
 
-              {/* Cabecera del Pedido Dinámica para Evitar "Mesa Juan" */}
+              {/* Cabecera del Pedido Dinámica */}
               <div className="bg-slate-900 rounded-xl p-3 border border-slate-750 flex justify-between items-center">
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold block uppercase">
@@ -241,6 +259,18 @@ export default function CocinaPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Adicionales dentro del Modal */}
+                {adicionales && adicionales.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Notas / Adicionales:</p>
+                    {adicionales.map((item, index) => (
+                      <div key={index} className="bg-sky-950/40 border border-sky-900/40 p-2 rounded-lg text-xs font-bold text-sky-300 capitalize">
+                        ➕ {item}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Especificaciones / Notas si existen */}
                 {especificaciones.length > 0 && (
