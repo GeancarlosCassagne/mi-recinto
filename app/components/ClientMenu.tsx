@@ -370,25 +370,48 @@ export default function ClientMenu() {
       }
 
       if (idPedidoAEditar) {
-        // MODO EDICIÓN: UPDATE Y REEMPLAZO DE PLATOS
-        await supabase
-          .from('pedidos')
-          .update({ mesa: mesaConAdicionales, total })
-          .eq('id', idPedidoAEditar);
+  // 1. Volvemos a armar la cabecera completa con los nuevos adicionales/notas si los hay
+  let mesaUpdate = `${prefijoTipo}${mesa.trim()} [MESERA: ${mesera}]`;
+  
+  if (adicionales.length > 0) {
+    const textoAdicionales = adicionales.map(a => `${a.descripcion} ($${a.precio.toFixed(2)})`).join(', ');
+    mesaUpdate = `${mesaUpdate} [EXTRA: ${textoAdicionales}]`;
+  }
 
-        await supabase.from('detalles_pedido').delete().eq('pedido_id', idPedidoAEditar);
+  // 2. Inyectamos las especificaciones actualizadas de los platos a la cabecera
+  if (detallesExtrasTexto) {
+    const separador = mesaUpdate.includes('[EXTRA:') ? ' | ' : ' [EXTRA: ';
+    const cierre = mesaUpdate.includes('[EXTRA:') ? '' : ']';
+    mesaUpdate = `${mesaUpdate}${separador}Especificaciones: ${detallesExtrasTexto}${cierre}`;
+  }
 
-        const detallesParaInsertar = carrito.map((item) => ({
-          pedido_id: idPedidoAEditar,
-          plato_id: item.plato.id,
-          cantidad: item.grid,
-          precio_unitario: item.plato.precio
-        }));
+  // 3. Enviamos el UPDATE a Supabase con la nueva cabecera (que lee cocina) y el nuevo valor total
+  const { error: errorUpdate } = await supabase
+    .from('pedidos')
+    .update({ 
+      mesa: mesaUpdate, 
+      total: total 
+    })
+    .eq('id', idPedidoAEditar);
 
-        if (detallesParaInsertar.length > 0) {
-          await supabase.from('detalles_pedido').insert(detallesParaInsertar);
-        }
-        setIdPedidoAEditar(null);
+  if (errorUpdate) throw errorUpdate;
+
+  // 4. Reemplazamos los platos viejos de la cocina por los nuevos del carrito
+  await supabase.from('detalles_pedido').delete().eq('pedido_id', idPedidoAEditar);
+
+  const detallesParaInsertar = carrito.map((item) => ({
+    pedido_id: idPedidoAEditar,
+    plato_id: item.plato.id,
+    cantidad: item.grid,
+    precio_unitario: item.plato.precio
+  }));
+
+  if (detallesParaInsertar.length > 0) {
+    const { error: errorInsertDetalles } = await supabase.from('detalles_pedido').insert(detallesParaInsertar);
+    if (errorInsertDetalles) throw errorInsertDetalles;
+  }
+
+  setIdPedidoAEditar(null);
       } else {
         // MODO NUEVO: INSERCIÓN LIMPIA ORIGINAL
         const { data: nuevoPedido, error: errorPedido } = await supabase
