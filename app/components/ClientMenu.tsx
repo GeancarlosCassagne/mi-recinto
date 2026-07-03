@@ -59,6 +59,11 @@ export default function ClientMenu() {
 
   const listadoMeseras = ['Claudia', 'Carolina', 'Sofia', 'Maria', 'Esperanza'];
 
+  // NUEVOS ESTADOS PARA PASAR A MODO EDICIÓN
+  const [idPedidoAEditar, setIdPedidoAEditar] = useState<string | null>(null);
+  const [pedidosActivos, setPedidosActivos] = useState<any[]>([]);
+  const [mostrarListaModificar, setMostrarListaModificar] = useState(false);
+
   const mostrarCheckCentral = (texto: string) => {
     setNotificacion({ visible: true, mensaje: texto });
   };
@@ -139,6 +144,36 @@ export default function ClientMenu() {
       supabase.removeChannel(canal);
     };
   }, []);
+
+  const cargarPedidoEnCarrito = (pedido: any) => {
+    let textoMesa = pedido.mesa;
+    if (textoMesa.includes('[TIPO:LLEVAR]')) {
+      setTipoEntrega('llevar');
+      textoMesa = textoMesa.replace('[TIPO:LLEVAR]', '').trim();
+    } else {
+      setTipoEntrega('servirse');
+      if (textoMesa.includes('[TIPO:SERVIR]')) textoMesa = textoMesa.replace('[TIPO:SERVIR]', '').trim();
+    }
+    textoMesa = textoMesa.split('[MESERA:')[0].trim();
+    setMesa(textoMesa);
+
+    const itemsCargados = pedido.detalles_pedido.map((det: any) => ({
+      idUnico: det.plato_id,
+      plato: {
+        id: det.plato_id,
+        nombre: det.platos.nombre,
+        precio: det.precio_unitario,
+        disponible: true,
+        categoria: 'fijo'
+      },
+      grid: det.cantidad
+    }));
+
+    setCarrito(itemsCargados);
+    setIdPedidoAEditar(pedido.id);
+    setMostrarListaModificar(false);
+    mostrarCheckCentral('Pedido Cargado');
+  };
 
   const handleAgregarClick = (plato: Plato) => {
     if (!plato) return;
@@ -293,14 +328,6 @@ export default function ClientMenu() {
     }
 
     try {
-      const { data: nuevoPedido, error: errorPedido } = await supabase
-        .from('pedidos')
-        .insert([{ mesa: mesaConAdicionales, total, estado: 'pendiente' }])
-        .select()
-        .single();
-
-      if (errorPedido) throw errorPedido;
-
       const detallesExtrasTexto = carrito
         .filter(item => item.detallesPersonalizados)
         .map(item => `${item.grid}x ${item.plato.nombre} (${item.detallesPersonalizados})`)
@@ -310,19 +337,52 @@ export default function ClientMenu() {
         const separador = mesaConAdicionales.includes('[EXTRA:') ? ' | ' : ' [EXTRA: ';
         const cierre = mesaConAdicionales.includes('[EXTRA:') ? '' : ']';
         mesaConAdicionales = `${mesaConAdicionales}${separador}Especificaciones: ${detallesExtrasTexto}${cierre}`;
-        await supabase.from('pedidos').update({ mesa: mesaConAdicionales }).eq('id', nuevoPedido.id);
       }
 
-      const detallesParaInsertar = carrito.map((item) => ({
-        pedido_id: nuevoPedido.id,
-        plato_id: item.plato.id,
-        cantidad: item.grid,
-        precio_unitario: item.plato.precio
-      }));
+      if (idPedidoAEditar) {
+        // MODO EDICIÓN: UPDATE Y REEMPLAZO DE PLATOS
+        await supabase
+          .from('pedidos')
+          .update({ mesa: mesaConAdicionales, total })
+          .eq('id', idPedidoAEditar);
 
-      if (detallesParaInsertar.length > 0) {
-        const { error: errorDetalles } = await supabase.from('detalles_pedido').insert(detallesParaInsertar);
-        if (errorDetalles) throw errorDetalles;
+        await supabase.from('detalles_pedido').delete().eq('pedido_id', idPedidoAEditar);
+
+        const detallesParaInsertar = carrito.map((item) => ({
+          pedido_id: idPedidoAEditar,
+          plato_id: item.plato.id,
+          cantidad: item.grid,
+          precio_unitario: item.plato.precio
+        }));
+
+        if (detallesParaInsertar.length > 0) {
+          await supabase.from('detalles_pedido').insert(detallesParaInsertar);
+        }
+        setIdPedidoAEditar(null);
+      } else {
+        // MODO NUEVO: INSERCIÓN LIMPIA ORIGINAL
+        const { data: nuevoPedido, error: errorPedido } = await supabase
+          .from('pedidos')
+          .insert([{ mesa: mesaConAdicionales, total, estado: 'pendiente' }])
+          .select()
+          .single();
+
+        if (errorPedido) throw errorPedido;
+
+        if (detallesExtrasTexto) {
+          await supabase.from('pedidos').update({ mesa: mesaConAdicionales }).eq('id', nuevoPedido.id);
+        }
+
+        const detallesParaInsertar = carrito.map((item) => ({
+          pedido_id: nuevoPedido.id,
+          plato_id: item.plato.id,
+          cantidad: item.grid,
+          precio_unitario: item.plato.precio
+        }));
+
+        if (detallesParaInsertar.length > 0) {
+          await supabase.from('detalles_pedido').insert(detallesParaInsertar);
+        }
       }
 
       setCarrito([]);
@@ -728,7 +788,9 @@ export default function ClientMenu() {
         )}
 
         <div className="border-t border-gray-200 pt-3 flex justify-between items-center text-base font-black text-gray-950"><span>Total:</span><span className="text-emerald-800">${total.toFixed(2)}</span></div>
-        <button onClick={revisarPedidoAntesDeConfirmar} disabled={enviando || (carrito.length === 0 && adicionales.length === 0)} className="w-full bg-emerald-700 text-white py-3 rounded-xl font-bold hover:bg-emerald-800 shadow-sm text-sm tracking-wide">{enviando ? 'Procesando...' : 'Confirmar Pedido'}</button>
+        <button onClick={revisarPedidoAntesDeConfirmar} disabled={enviando || (carrito.length === 0 && adicionales.length === 0)} className="w-full bg-emerald-700 text-white py-3 rounded-xl font-bold hover:bg-emerald-800 shadow-sm text-sm tracking-wide">
+    {enviando ? 'Procesando...' : idPedidoAEditar ? '💾 Guardar Cambios' : 'Confirmar Pedido'}
+  </button>
       </div>
 
       {/* MODAL CENTRAL DE CONFIRMACIÓN */}
