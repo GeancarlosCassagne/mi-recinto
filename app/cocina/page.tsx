@@ -168,7 +168,7 @@ export default function CocinaPage() {
                     {especificaciones.length > 0 && (
                       <div className="mt-4 border-t border-dashed border-slate-200/60 pt-3">
                         <div className="flex flex-col gap-1">
-                          {especificacionesTexto(especificaciones)}
+                          {templatesTexto(especificaciones)}
                         </div>
                       </div>
                     )}
