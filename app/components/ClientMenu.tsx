@@ -444,20 +444,37 @@ export default function ClientMenu() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 justify-center">
-          {listadoMeseras.map((m) => (
-            <button 
-              key={m} 
-              onClick={() => { 
-                setMesera(m); 
-                mostrarCheckCentral('Seleccionado');
-              }} 
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${mesera === m ? 'bg-emerald-700 text-white shadow-md scale-105' : 'bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-100/40'}`}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      </div>
+  {listadoMeseras.map((m) => (
+    <button 
+      key={m} 
+      onClick={() => { 
+        setMesera(m); 
+        mostrarCheckCentral('Seleccionado');
+      }} 
+      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${mesera === m ? 'bg-emerald-700 text-white shadow-md scale-105' : 'bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-100/40'}`}
+    >
+      {m}
+    </button>
+  ))}
+  
+  {/* NUEVO BOTÓN AGREGADO AL DISEÑO */}
+  <button 
+    onClick={async () => {
+      const hoy = new Date().toISOString().split('T')[0];
+      const { data } = await supabase
+        .from('pedidos')
+        .select('id, mesa, total, detalles_pedido(cantidad, plato_id, precio_unitario, platos(nombre))')
+        .eq('estado', 'pendiente')
+        .gte('created_at', `${hoy} 00:00:00`);
+      if (data) setPedidosActivos(data);
+      setMostrarListaModificar(true);
+    }}
+    className="bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-extrabold shadow-sm hover:bg-amber-700 transition flex items-center gap-1"
+  >
+    ✏️ Editar Orden
+  </button>
+</div>
+</div>
 
       {/* SECCIÓN DEL MENÚ */}
       <div className="md:col-span-2 space-y-6">
@@ -854,6 +871,40 @@ export default function ClientMenu() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl px-8 py-6 shadow-2xl flex flex-col items-center space-y-3 animate-in zoom-in-95 duration-150 text-white">
             <CheckCircle className="h-14 w-14 text-emerald-500 animate-bounce" />
             <span className="text-lg font-black tracking-wide uppercase">{notificacion.mensaje}</span>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE SELECCIÓN DE COMANDA ACTIVA A EDITAR */}
+      {mostrarListaModificar && (
+        <div className="fixed inset-0 bg-gray-950/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col space-y-4 text-left">
+            <div className="flex justify-between items-center border-b pb-2">
+              <h3 className="text-base font-black text-gray-950">Seleccionar Comanda para Modificar</h3>
+              <button onClick={() => setMostrarListaModificar(false)} className="text-xs font-bold text-gray-400 hover:text-gray-600">X</button>
+            </div>
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1 divide-y divide-gray-100">
+              {pedidosActivos.length === 0 ? (
+                <p className="text-center text-gray-400 text-xs py-4 italic">No hay comandas pendientes en cocina hoy.</p>
+              ) : (
+                pedidosActivos.map((ped) => {
+                  const labelMesa = ped.mesa.includes('[TIPO:LLEVAR]') ? ped.mesa.split('[TIPO:LLEVAR]')[1].split('[MESERA:')[0].trim() : ped.mesa.split('[TIPO:SERVIR]')[1]?.split('[MESERA:')[0].trim() || ped.mesa;
+                  return (
+                    <button 
+                      key={ped.id} 
+                      onClick={() => cargarPedidoEnCarrito(ped)}
+                      className="w-full text-left p-3 hover:bg-slate-50 transition rounded-xl flex justify-between items-center text-xs pt-2.5"
+                    >
+                      <div>
+                        <span className="font-black text-gray-950 uppercase block">{ped.mesa.includes('[TIPO:LLEVAR]') ? `Cliente: ${labelMesa}` : `Mesa: ${labelMesa}`}</span>
+                        <span className="text-gray-400 text-[10px]">Total original: ${Number(ped.total).toFixed(2)}</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-emerald-700" />
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       )}
