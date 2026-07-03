@@ -473,21 +473,22 @@ export default function ClientMenu() {
             <p className="text-xs text-emerald-700 font-medium">Selecciona tu nombre antes de ingresar comandas</p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 justify-center">
-  {listadoMeseras.map((m) => (
-    <button 
-      key={m} 
-      onClick={() => { 
-        setMesera(m); 
-        mostrarCheckCentral('Seleccionado');
-      }} 
-      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${mesera === m ? 'bg-emerald-700 text-white shadow-md scale-105' : 'bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-100/40'}`}
-    >
-      {m}
-    </button>
-  ))}
-  
-  {/* NUEVO BOTÓN AGREGADO AL DISEÑO */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 justify-center w-full sm:w-auto">
+  <select
+    value={mesera}
+    onChange={(e) => {
+      setMesera(e.target.value);
+      if (e.target.value) mostrarCheckCentral('Seleccionado');
+    }}
+    className="border border-emerald-200 text-emerald-950 font-bold text-xs rounded-xl p-2.5 bg-white outline-none focus:ring-2 focus:ring-emerald-700 w-full sm:w-44 shadow-sm"
+  >
+    <option value="">Seleccionar Mesera...</option>
+    {listadoMeseras.map((m) => (
+      <option key={m} value={m}>{m.toUpperCase()}</option>
+    ))}
+  </select>
+
+  {/* Tu botón naranja de Editar Orden se mantiene al lado */}
   <button 
     onClick={async () => {
       const hoy = new Date().toISOString().split('T')[0];
@@ -499,7 +500,7 @@ export default function ClientMenu() {
       if (data) setPedidosActivos(data);
       setMostrarListaModificar(true);
     }}
-    className="bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-extrabold shadow-sm hover:bg-amber-700 transition flex items-center gap-1"
+    className="bg-amber-600 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm hover:bg-amber-700 transition flex items-center gap-1 w-full sm:w-auto justify-center"
   >
     ✏️ Editar Orden
   </button>
@@ -779,13 +780,28 @@ export default function ClientMenu() {
           <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
             {tipoEntrega === 'llevar' ? 'Nombre del Cliente / Identificador' : 'Mesa / Identificador'}
           </label>
-          <input 
-            type="text" 
-            placeholder={tipoEntrega === 'llevar' ? 'Ej. Juan Pérez' : 'Ej. Mesa 4'} 
-            value={mesa} 
-            onChange={(e) => setMesa(e.target.value)} 
-            className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm" 
-          />
+          {tipoEntrega === 'llevar' ? (
+  // Si es para llevar, dejamos el input abierto para poner el nombre del cliente
+  <input 
+    type="text" 
+    placeholder="Nombre del Cliente (Ej. Juan Pérez)" 
+    value={mesa} 
+    onChange={(e) => setMesa(e.target.value)} 
+    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm font-bold" 
+  />
+) : (
+  // Si es para servirse en local, se convierte en el desplegable del 1 al 20
+  <select
+    value={mesa}
+    onChange={(e) => setMesa(e.target.value)}
+    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm font-black text-gray-800"
+  >
+    <option value="">Selecciona una Mesa...</option>
+    {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
+      <option key={num} value={`${num}`}>{`MESA ${num}`}</option>
+    ))}
+  </select>
+)}
         </div>
 
         <div className="divide-y divide-gray-200/60 max-h-60 overflow-y-auto pr-1">
@@ -826,7 +842,16 @@ export default function ClientMenu() {
         ) : (
           <form onSubmit={agregarAdicionalALaLista} className="bg-white p-3 border border-gray-200 rounded-xl space-y-2 shadow-sm">
             <input type="text" placeholder="Ej. Cola Extra o Porción de Maní" value={descAdicional} onChange={(e) => setDescAdicional(e.target.value)} className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white" required />
-            <input type="text" placeholder="Precio (Ej. 1.00)" value={precioAdicional} onChange={(e) => setPrecioAdicional(e.target.value)} className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white" required />
+            <select
+  value={precioAdicional}
+  onChange={(e) => setPrecioAdicional(e.target.value)}
+  className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white font-bold text-gray-700"
+  required
+>
+  <option value="">Seleccionar Precio Adicional...</option>
+  <option value="0.50">{"$0.50 Centavos"}</option>
+  <option value="1.00">{"$1.00 Dólar"}</option>
+</select>
             <div className="flex gap-2 justify-end text-[11px] font-bold pt-1">
               <button type="button" onClick={() => setMostrarFormAdicional(false)} className="text-gray-400 hover:text-gray-600">Cancelar</button>
               <button type="submit" className="px-3 py-1 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition">Añadir</button>
