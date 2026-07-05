@@ -82,8 +82,14 @@ export default function CocinaPage() {
       const parteEspecificaciones = textoMesa.split('Especificaciones:')[1].replace(']', '').trim();
       especificaciones = parteEspecificaciones.split('|').map(s => s.trim()).filter(Boolean);
     }
+    
+    // Extracción limpia para aislar las notas adicionales y evitar que absorba especificaciones
     if (textoMesa.includes('[EXTRA:')) {
-      const parteExtras = textoMesa.split('[EXTRA:')[1].split(']')[0].trim();
+      let parteExtras = textoMesa.split('[EXTRA:')[1];
+      if (parteExtras.includes('Especificaciones:')) {
+        parteExtras = parteExtras.split('Especificaciones:')[0].replace('|', '').trim();
+      }
+      parteExtras = parteExtras.replace(']', '').trim();
       adicionales = parteExtras.split(',').map(s => s.trim()).filter(Boolean);
     }
 
@@ -183,8 +189,10 @@ export default function CocinaPage() {
                       </div>
                     )}
 
+                    {/* DETALLES DE COMPOSICIÓN DEL ALMUERZO EN LA PARTE INFERIOR */}
                     {especificaciones.length > 0 && (
-                      <div className="mt-4 border-t border-dashed border-slate-200/60 pt-3">
+                      <div className="mt-4 border-t border-dashed border-slate-700 pt-3">
+                        <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-1.5">Detalles del Pedido:</p>
                         <div className="flex flex-col gap-1">
                           {templatesTexto(especificaciones)}
                         </div>
