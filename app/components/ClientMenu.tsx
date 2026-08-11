@@ -465,6 +465,9 @@ export default function ClientMenu() {
           if (errorInsertDetalles) throw errorInsertDetalles;
         }
 
+        
+
+        
         setIdPedidoAEditar(null);
       } else {
         const { data: nuevoPedido, error: errorPedido } = await supabase
@@ -491,11 +494,16 @@ export default function ClientMenu() {
         }
       }
 
+      if (idPedidoAEditar) {
+        mostrarCheckCentral('Pedido Guardado Exitosamente');
+      } else {
+        // Muestra el popup flotante verde en el centro de la pantalla
+        mostrarCheckCentral('El pedido se ha enviado correctamente a cocina');
+      }
+
       setCarrito([]);
       setAdicionales([]);
       setMesa('');
-      setMensajeExito(true);
-      setTimeout(() => setMensajeExito(false), 4000);
     } catch (error: any) {
       console.error(error);
       alert('Hubo un problema al procesar tu pedido.');
