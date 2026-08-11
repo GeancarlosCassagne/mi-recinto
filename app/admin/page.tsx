@@ -189,6 +189,7 @@ export default function AdminPage() {
     const n = nombrePlato.toLowerCase();
     return catPlato === 'fijo' || 
            catPlato === 'bebida' ||
+           catPlato === 'jugo' ||
            catPlato === 'tonga_gallina' ||
            catPlato === 'tonga_presa' ||
            n.includes('tonga') || 
@@ -270,18 +271,26 @@ export default function AdminPage() {
   };
 
   const procesarMesaCompleta = (textoMesa: string) => {
-    let numeroMesa = textoMesa; let nombreMesera = 'No especificada'; let listaExtras: string[] = [];
+    let numeroMesa = textoMesa; 
+    let nombreMesera = 'No especificada'; 
+    let listaExtras: string[] = [];
+
     if (textoMesa.includes('[MESERA:')) {
       numeroMesa = textoMesa.split('[MESERA:')[0].trim();
       nombreMesera = textoMesa.split('[MESERA:')[1].split(']')[0].trim();
     }
     if (numeroMesa.includes('[EXTRA:')) numeroMesa = numeroMesa.split('[EXTRA:')[0].trim();
-    if (textoMesa.includes('[EXTRA:')) {
-      textoMesa.substring(textoMesa.indexOf('[EXTRA:') + 7).replace(']', '').split('|').forEach(seg => {
-        const limpio = seg.replace('Especificaciones:', '').trim();
-        if (limpio) listaExtras.push(limpio);
-      });
+    if (numeroMesa.includes('[TIPO:LLEVAR]')) numeroMesa = numeroMesa.replace('[TIPO:LLEVAR]', '').trim();
+    if (numeroMesa.includes('[TIPO:SERVIR]')) numeroMesa = numeroMesa.replace('[TIPO:SERVIR]', '').trim();
+
+    if (textoMesa.includes('Especificaciones:')) {
+      const textoEsp = textoMesa.split('Especificaciones:')[1].replace(']', '').trim();
+      listaExtras = textoEsp.split(/,|\|/).map(seg => seg.trim()).filter(Boolean);
+    } else if (textoMesa.includes('[EXTRA:')) {
+      const textoExtra = textoMesa.split('[EXTRA:')[1].split(']')[0].trim();
+      listaExtras = textoExtra.split(/,|\|/).map(seg => seg.trim()).filter(Boolean);
     }
+
     return { numeroMesa, nombreMesera, listaExtras };
   };
 
@@ -368,7 +377,8 @@ export default function AdminPage() {
                   <option value="segundo">🥩 Segundo (Plato Fuerte)</option>
                   <option value="caldo">🥣 Caldo / Sopa</option>
                   <option value="fijo">🍃 Fijo (Tonga, Almuerzo del Día)</option>
-                  <option value="bebida">🥤 Bebida (Fijo siempre)</option>
+                  <option value="jugo">🧃 Jugo del Día (Incluido en Almuerzo)</option>
+                  <option value="bebida">🥤 Bebida Comercial (Cola / Agua - Extra)</option>
                 </select>
               </div>
 
@@ -478,7 +488,8 @@ export default function AdminPage() {
                           <option value="segundo">🥩 Segundo</option>
                           <option value="caldo">🥣 Caldo</option>
                           <option value="fijo">🍃 Fijo</option>
-                          <option value="bebida">🥤 Bebida</option>
+                          <option value="jugo">🧃 Jugo del Día</option>
+                          <option value="bebida">🥤 Bebida Comercial</option>
                         </select>
                       </div>
                     </div>
@@ -517,39 +528,57 @@ export default function AdminPage() {
         <button onClick={guardarMenuDiario} className="w-full mt-6 bg-gray-950 text-white font-bold text-xs uppercase py-3.5 rounded-xl shadow-sm hover:bg-gray-900 transition">Establecer menú diario</button>
       </div>
 
-      {/* MODAL HISTORIAL DE COMANDAS */}
+      {/* MODAL HISTORIAL DE COMANDAS REDISEÑADO */}
       {verDetalleModal && (
         <div className="fixed inset-0 bg-gray-950/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-xl relative border border-gray-100">
             <button onClick={() => setVerDetalleModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             <h3 className="text-xl font-bold mb-4 border-b pb-3 flex items-center gap-2 text-gray-950"><ClipboardList className="text-emerald-700" /> Registro de Pedidos - {fechaSeleccionada}</h3>
-            <div className="divide-y max-h-[400px] overflow-y-auto pr-1">
+            <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto pr-1">
               {pedidosDia.length === 0 ? (
                 <p className="text-center text-gray-400 text-xs py-8 italic">No se registran transacciones en esta fecha.</p>
               ) : (
                 pedidosDia.map((p) => {
                   const { numeroMesa, nombreMesera, listaExtras } = procesarMesaCompleta(p.mesa);
+                  const esParaLlevar = p.mesa.includes('[TIPO:LLEVAR]');
+
                   return (
-                    <div key={p.id} className="py-4 flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-black text-sm uppercase text-white">
-                            {p.mesa.includes('[TIPO:LLEVAR]') ? `Cliente: ${numeroMesa}` : `Mesa ${numeroMesa}`}
-                          </p>
-                          <span className="text-[9px] px-2 py-0.5 rounded-md font-bold bg-emerald-700 text-white flex items-center gap-1"><User className="h-2.5 w-2.5" /> {nombreMesera}</span>
+                    <div key={p.id} className="py-4 border-b border-gray-100 last:border-0 space-y-3">
+                      {/* CABECERA: Ubicación + Mesera + Total */}
+                      <div className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <div className="flex items-center gap-2.5">
+                          <span className={`text-xs font-black uppercase px-2.5 py-1 rounded-lg ${
+                            esParaLlevar ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
+                          }`}>
+                            {esParaLlevar ? `🏃‍♂️ Cliente: ${numeroMesa}` : `🍽️ Mesa ${numeroMesa}`}
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-600 bg-white border px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-sm">
+                            <User className="h-3 w-3 text-emerald-700" /> {nombreMesera}
+                          </span>
                         </div>
-                        <div className="space-y-1 mt-2 pl-1">
-                          {p.detalles_pedido?.map((det, idx) => (<p key={idx} className="text-xs text-gray-800 font-medium capitalize">• {det.platos?.nombre} <span className="text-gray-400 font-bold text-[10px]">x{det.cantidad}</span></p>))}
-                        </div>
-                        {listaExtras.length > 0 && (
-                          <div className="mt-2 bg-emerald-50 border border-emerald-100 rounded-xl p-2.5 max-w-md">
-                            <div className="flex flex-col gap-1">
-                              {listaExtras.map((item, index) => (<p key={index} className="text-xs text-emerald-950 font-medium capitalize border-l-2 border-emerald-600/20 pl-2">{item}</p>))}
+                        <span className="font-black text-base text-emerald-900 font-mono">
+                          ${Number(p.total).toFixed(2)}
+                        </span>
+                      </div>
+
+                      {/* LISTA DE DETALLES O ESPECIFICACIONES DESGLOSADAS POR FILA */}
+                      <div className="space-y-1.5 pl-1">
+                        {listaExtras.length > 0 ? (
+                          listaExtras.map((extra, idx) => (
+                            <div key={idx} className="bg-emerald-50/60 border border-emerald-100 p-2.5 rounded-xl text-xs font-bold text-emerald-950 flex items-start gap-2">
+                              <span className="text-emerald-700 font-black">•</span>
+                              <span className="capitalize leading-snug">{extra}</span>
                             </div>
-                          </div>
+                          ))
+                        ) : (
+                          p.detalles_pedido?.map((det, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-xs font-bold text-gray-800 bg-gray-50/60 p-2 rounded-lg border border-gray-100">
+                              <span className="capitalize">• {det.platos?.nombre}</span>
+                              <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-md font-mono text-[11px]">x{det.cantidad}</span>
+                            </div>
+                          ))
                         )}
                       </div>
-                      <div className="font-black text-base text-gray-950">${Number(p.total).toFixed(2)}</div>
                     </div>
                   );
                 })
