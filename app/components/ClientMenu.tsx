@@ -151,7 +151,13 @@ export default function ClientMenu() {
 
     const canal = supabase
       .channel('cambios-menu-cliente')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'platos' }, () => inicializarMenu())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'platos' }, (payload) => {
+        // Si el evento en Supabase es un borrado, lo quitamos de inmediato de la lista sin esperar recarga
+        if (payload.eventType === 'DELETE') {
+          setPlatos((prev) => prev.filter((p) => p.id !== payload.old.id));
+        }
+        inicializarMenu();
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_diario' }, () => inicializarMenu())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cajas' }, () => inicializarMenu())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'meseras' }, () => obtenerMeserasCliente())
