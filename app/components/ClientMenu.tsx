@@ -507,16 +507,32 @@ export default function ClientMenu() {
   const opcionesSegundos = platos.filter(p => p.categoria === 'segundo');
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
   const opcionesBebidas = platos.filter(p => {
-    const cat = p.categoria;
-    const n = p.nombre.toLowerCase();
-    return cat === 'bebida' || 
-           n.includes('quaker') || 
-           n.includes('limon') || 
-           n.includes('jugo') || 
-           n.includes('mora') || 
-           n.includes('maracuya') || 
-           n.includes('chicha');
-  });
+  const cat = p.categoria;
+  const n = p.nombre.toLowerCase();
+  
+  // Excluimos explícitamente colas, gaseosas y botellas comerciales (tienen costo extra)
+  const esColaOBebidaExtra = n.includes('cola') || 
+                             n.includes('litro') || 
+                             n.includes('personal') || 
+                             n.includes('vidrio') || 
+                             n.includes('plastico') || 
+                             n.includes('botella') ||
+                             n.includes('agua');
+
+  if (esColaOBebidaExtra) return false;
+
+  // Solo incluimos los jugos/refrescos caseros de la casa
+  return cat === 'jugo' || 
+         cat === 'bebida' || 
+         n.includes('quaker') || 
+         n.includes('limon') || 
+         n.includes('jugo') || 
+         n.includes('mora') || 
+         n.includes('maracuya') || 
+         n.includes('chicha') ||
+         n.includes('tamarindo') ||
+         n.includes('horchata');
+});
 
   const opcionesGallinaTonga = platos.filter(p => p.categoria === 'tonga_gallina');
   const opcionesPresaTonga = platos.filter(p => p.categoria === 'tonga_presa');
@@ -706,14 +722,15 @@ export default function ClientMenu() {
                       <button 
                         key={s.id} 
                         disabled={!s.disponible}
-                        onClick={() => { 
-                          setSegundoElegido(s.nombre);
-                          if (tipoAlmuerzo === 'completo') { 
-                            setPasoAlmuerzo('caldo'); 
-                          } else { 
-                            setPasoAlmuerzo('bebida');
-                          } 
-                        }} 
+                      onClick={() => { 
+  setSegundoElegido(s.nombre);
+  if (tipoAlmuerzo === 'completo') { 
+    setPasoAlmuerzo('caldo'); 
+  } else { 
+    // Si es "Solo Segundo", pasa directo a elegir el jugo sin alterar el precio de $2.50
+    setPasoAlmuerzo('bebida');
+  } 
+}} 
                         className={`p-3 border rounded-xl font-semibold text-left text-xs uppercase flex justify-between items-center shadow-sm transition-all ${
                           s.disponible 
                             ? 'bg-white text-gray-900 hover:bg-emerald-50/50' 
