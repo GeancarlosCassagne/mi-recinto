@@ -451,20 +451,26 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* PLANIFICADOR MENÚ DIARIO */}
-      <div className="md:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 flex flex-col justify-between shadow-sm">
-        <div>
-          <div className="flex justify-between border-b pb-4 mb-4 items-center">
-            <h2 className="text-lg font-bold">Planificador del Menú del Día</h2>
+      {/* PLANIFICADOR MENÚ DIARIO REDISEÑADO CON TARJETAS ENCAJONADAS */}
+      <div className="md:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 flex flex-col justify-between shadow-sm h-full">
+        <div className="flex flex-col flex-1 min-h-0">
+          <div className="flex justify-between border-b border-gray-100 pb-4 mb-4 items-center shrink-0">
+            <h2 className="text-lg font-bold text-gray-950">Planificador del Menú del Día</h2>
             <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold px-2.5 py-1 rounded-md uppercase">Índice Activo</span>
           </div>
-          <div className="divide-y divide-gray-100 max-h-[420px] overflow-y-auto pr-1 pb-3 px-2">
+
+          <div className="space-y-3 overflow-y-auto pr-1.5 pb-2 max-h-[580px] flex-1">
             {platosPlanificadorVisibles.map((plato) => {
               const esFijo = esPlatoFijoInmutable(plato.nombre, plato.categoria);
               const marcado = esFijo || platosSeleccionados.includes(plato.id);
 
               return (
-                <div key={plato.id} className="py-3.5 px-3 flex justify-between items-center hover:bg-gray-50/80 transition-all rounded-xl gap-4">
+                <div 
+                  key={plato.id} 
+                  className={`p-3.5 border rounded-2xl flex justify-between items-center transition-all gap-4 shadow-sm ${
+                    marcado ? 'bg-emerald-50/40 border-emerald-200' : 'bg-gray-50/60 border-gray-200 hover:border-gray-300 hover:bg-white'
+                  }`}
+                >
                   <div className="flex items-center space-x-3.5 flex-1 min-w-0">
                     <button 
                       type="button"
@@ -472,18 +478,19 @@ export default function AdminPage() {
                       className="flex items-center justify-center text-gray-400 hover:text-emerald-700 transition-colors focus:outline-none shrink-0"
                     >
                       {marcado ? (
-                        <CheckSquare className={`h-5 w-5 ${esFijo ? 'text-gray-300' : 'text-emerald-700'}`} />
+                        <CheckSquare className={`h-5 w-5 ${esFijo ? 'text-gray-400' : 'text-emerald-700'}`} />
                       ) : (
                         <Square className="h-5 w-5 text-gray-300" />
                       )}
                     </button>
+
                     <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-sm capitalize text-gray-950 truncate">{plato.nombre}</h4>
                       <div className="mt-1 flex items-center space-x-1">
                         <select 
                           value={plato.categoria || 'segundo'} 
                           onChange={(e) => cambiarCategoriaPlato(plato.id, e.target.value)}
-                          className="text-[11px] font-bold text-gray-500 bg-gray-100 border border-gray-200 rounded-lg px-1.5 py-0.5 outline-none focus:border-emerald-600 transition"
+                          className="text-[11px] font-bold text-gray-600 bg-white border border-gray-200 rounded-lg px-2 py-0.5 outline-none focus:border-emerald-600 transition shadow-sm"
                         >
                           <option value="segundo">🥩 Segundo</option>
                           <option value="caldo">🥣 Caldo</option>
@@ -525,7 +532,13 @@ export default function AdminPage() {
             })}
           </div>
         </div>
-        <button onClick={guardarMenuDiario} className="w-full mt-6 bg-gray-950 text-white font-bold text-xs uppercase py-3.5 rounded-xl shadow-sm hover:bg-gray-900 transition">Establecer menú diario</button>
+
+        <button 
+          onClick={guardarMenuDiario} 
+          className="w-full mt-4 bg-gray-950 text-white font-extrabold text-xs uppercase py-4 rounded-xl shadow-md hover:bg-gray-900 transition tracking-wider shrink-0"
+        >
+          Establecer Menú Diario
+        </button>
       </div>
 
       {/* MODAL HISTORIAL DE COMANDAS REDISEÑADO */}
