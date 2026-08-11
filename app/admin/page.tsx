@@ -171,8 +171,29 @@ export default function AdminPage() {
     }
   };
 
-  const eliminarPlato = async (id: string, nombrePlato: string) => {
-    const seguro = confirm(`¿Estás seguro de que deseas eliminar permanentemente el plato "${nombrePlato}" del Banco General?`);
+  const esPlatoFijoInmutable = (nombrePlato: string, catPlato: string) => {
+    const n = nombrePlato.toLowerCase();
+    return catPlato === 'fijo' || 
+           catPlato === 'bebida' ||
+           catPlato === 'tonga_gallina' ||
+           catPlato === 'tonga_presa' ||
+           n.includes('tonga') || 
+           n.includes('caldo criollo') ||
+           n.includes('seco criollo') ||
+           n.includes('almuerzo del día') || 
+           n.includes('cola pequeña') || 
+           n.includes('cola grande') || 
+           n.includes('botella de agua');
+  };
+
+  const eliminarPlato = async (id: string, nombrePlato: string, catPlato: string) => {
+    const esFijo = esPlatoFijoInmutable(nombrePlato, catPlato);
+
+    const mensajeConfirmacion = esFijo
+      ? `⚠️ ¡ATENCIÓN! Estás intentando borrar un plato FIJO ("${nombrePlato}").\n\n¿Estás completamente seguro de eliminarlo del Banco General?`
+      : `¿Estás seguro de que deseas eliminar permanentemente el plato "${nombrePlato}" del Banco General?`;
+
+    const seguro = confirm(mensajeConfirmacion);
     if (!seguro) return;
 
     try {
@@ -189,21 +210,6 @@ export default function AdminPage() {
       console.error(err);
       alert('No se pudo eliminar el plato.');
     }
-  };
-
-  const esPlatoFijoInmutable = (nombrePlato: string, catPlato: string) => {
-    const n = nombrePlato.toLowerCase();
-    return catPlato === 'fijo' || 
-           catPlato === 'bebida' ||
-           catPlato === 'tonga_gallina' ||
-           catPlato === 'tonga_presa' ||
-           n.includes('tonga') || 
-           n.includes('caldo criollo') ||
-           n.includes('seco criollo') ||
-           n.includes('almuerzo del día') || 
-           n.includes('cola pequeña') || 
-           n.includes('cola grande') || 
-           n.includes('botella de agua');
   };
 
   const alternarSeleccionPlato = (id: string, nombrePlato: string, catPlato: string) => {
@@ -297,18 +303,18 @@ export default function AdminPage() {
               <div><label className="block text-xs font-bold text-gray-500 mb-1">Precio Unitario (USD)</label><input type="text" value={precio} onChange={(e) => setPrecio(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. 5.00" /></div>
               
               <div>
-  <label className="block text-xs font-bold text-gray-500 mb-1">Tipo / Categoría de Plato</label>
-  <select 
-    value={categoria} 
-    onChange={(e) => setCategoria(e.target.value)} 
-    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700 font-medium text-gray-800"
-  >
-    <option value="segundo">🥩 Segundo (Plato Fuerte)</option>
-    <option value="caldo">🥣 Caldo / Sopa</option>
-    <option value="fijo">🍃 Fijo (Tonga, Almuerzo del Día)</option>
-    <option value="bebida">🥤 Bebida (Fijo siempre)</option>
-  </select>
-</div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Tipo / Categoría de Plato</label>
+                <select 
+                  value={categoria} 
+                  onChange={(e) => setCategoria(e.target.value)} 
+                  className="w-full border border-gray-200 rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700 font-medium text-gray-800"
+                >
+                  <option value="segundo">🥩 Segundo (Plato Fuerte)</option>
+                  <option value="caldo">🥣 Caldo / Sopa</option>
+                  <option value="fijo">🍃 Fijo (Tonga, Almuerzo del Día)</option>
+                  <option value="bebida">🥤 Bebida (Fijo siempre)</option>
+                </select>
+              </div>
 
               <button type="submit" className="w-full bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl shadow-sm hover:bg-emerald-800 transition">Guardar en Banco General</button>
             </form>
@@ -408,16 +414,16 @@ export default function AdminPage() {
                     <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-sm capitalize text-gray-950 truncate">{plato.nombre}</h4>
                       <div className="mt-1 flex items-center space-x-1">
-                       <select 
-  value={plato.categoria || 'segundo'} 
-  onChange={(e) => cambiarCategoriaPlato(plato.id, e.target.value)}
-  className="text-[11px] font-bold text-gray-500 bg-gray-100 border border-gray-200 rounded-lg px-1.5 py-0.5 outline-none focus:border-emerald-600 transition"
->
-  <option value="segundo">🥩 Segundo</option>
-  <option value="caldo">🥣 Caldo</option>
-  <option value="fijo">🍃 Fijo</option>
-  <option value="bebida">🥤 Bebida</option> {/* 👈 AGREGA ESTA LÍNEA */}
-</select>
+                        <select 
+                          value={plato.categoria || 'segundo'} 
+                          onChange={(e) => cambiarCategoriaPlato(plato.id, e.target.value)}
+                          className="text-[11px] font-bold text-gray-500 bg-gray-100 border border-gray-200 rounded-lg px-1.5 py-0.5 outline-none focus:border-emerald-600 transition"
+                        >
+                          <option value="segundo">🥩 Segundo</option>
+                          <option value="caldo">🥣 Caldo</option>
+                          <option value="fijo">🍃 Fijo</option>
+                          <option value="bebida">🥤 Bebida</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -434,16 +440,18 @@ export default function AdminPage() {
                       {plato.disponible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                     </button>
 
-                    {!esFijo && (
-                      <button 
-                        type="button"
-                        onClick={() => eliminarPlato(plato.id, plato.nombre)}
-                        className="p-2 rounded-xl border bg-red-50 border-red-200 text-red-600 hover:bg-red-100 transition-all flex items-center justify-center"
-                        title="Eliminar Plato Permanentemente"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
+                    <button 
+                      type="button"
+                      onClick={() => eliminarPlato(plato.id, plato.nombre, plato.categoria)}
+                      className={`p-2 rounded-xl border transition-all flex items-center justify-center ${
+                        esFijo 
+                          ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' 
+                          : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                      }`}
+                      title={esFijo ? 'Eliminar Plato Fijo (Requiere Confirmación)' : 'Eliminar Plato Permanentemente'}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               );
