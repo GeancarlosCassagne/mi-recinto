@@ -194,6 +194,7 @@ export default function AdminPage() {
   const esPlatoFijoInmutable = (nombrePlato: string, catPlato: string) => {
     const n = nombrePlato.toLowerCase();
     return catPlato === 'fijo' || 
+           catPlato === 'bebida' ||
            catPlato === 'tonga_gallina' ||
            catPlato === 'tonga_presa' ||
            n.includes('tonga') || 
@@ -296,13 +297,18 @@ export default function AdminPage() {
               <div><label className="block text-xs font-bold text-gray-500 mb-1">Precio Unitario (USD)</label><input type="text" value={precio} onChange={(e) => setPrecio(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. 5.00" /></div>
               
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1">Tipo / Categoría de Plato</label>
-                <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700 font-medium text-gray-800">
-                  <option value="segundo">🥩 Segundo (Plato Fuerte)</option>
-                  <option value="caldo">🥣 Caldo / Sopa</option>
-                  <option value="fijo">🥤 Fijo (Tonga, Almuerzo del Día, Bebidas)</option>
-                </select>
-              </div>
+  <label className="block text-xs font-bold text-gray-500 mb-1">Tipo / Categoría de Plato</label>
+  <select 
+    value={categoria} 
+    onChange={(e) => setCategoria(e.target.value)} 
+    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700 font-medium text-gray-800"
+  >
+    <option value="segundo">🥩 Segundo (Plato Fuerte)</option>
+    <option value="caldo">🥣 Caldo / Sopa</option>
+    <option value="fijo">🍃 Fijo (Tonga, Almuerzo del Día)</option>
+    <option value="bebida">🥤 Bebida (Fijo siempre)</option>
+  </select>
+</div>
 
               <button type="submit" className="w-full bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl shadow-sm hover:bg-emerald-800 transition">Guardar en Banco General</button>
             </form>

@@ -56,8 +56,9 @@ export default function ClientMenu() {
 
   const [configurandoAlmuerzo, setConfigurandoAlmuerzo] = useState(false);
   const [almuerzoSeleccionado, setAlmuerzoSeleccionado] = useState<Plato | null>(null);
-  const [pasoAlmuerzo, setPasoAlmuerzo] = useState<'tipo' | 'segundo' | 'caldo'>('tipo');
+  const [pasoAlmuerzo, setPasoAlmuerzo] = useState<'tipo' | 'segundo' | 'caldo' | 'bebida'>('tipo');
   const [tipoAlmuerzo, setTipoAlmuerzo] = useState<'completo' | 'segundo' | 'caldo'>('completo');
+  const [sopaElegida, setSopaElegida] = useState<string>('');
   const [almuerzoPrecio, setAlmuerzoPrecio] = useState<number>(3.00);
   const [segundoElegido, setSegundoElegido] = useState<string>('');
 
@@ -119,9 +120,12 @@ export default function ClientMenu() {
         const platosFiltrados = todosLosPlatos.filter(plato => {
           const nombreLimpio = plato.nombre.toLowerCase();
           const esFijo = plato.categoria === 'fijo' ||
+                         plato.categoria === 'bebida' ||
                          plato.categoria === 'tonga_gallina' ||
                          plato.categoria === 'tonga_presa' ||
                          nombreLimpio.includes('tonga') || 
+                         nombreLimpio.includes('caldo criollo') || 
+                         nombreLimpio.includes('seco criollo') || 
                          nombreLimpio.includes('almuerzo del día') || 
                          nombreLimpio.includes('cola pequeña') || 
                          nombreLimpio.includes('cola grande') || 
@@ -223,7 +227,6 @@ export default function ClientMenu() {
       setPasoTonga('gallina');
       setTipoGallina('');
     } else if (nombreLimpio.includes('caldo criollo') || nombreLimpio.includes('seco criollo')) {
-      // Abre directamente la selección de presas reutilizando el modal de la Tonga
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
@@ -233,6 +236,7 @@ export default function ClientMenu() {
       setConfigurandoAlmuerzo(true);
       setPasoAlmuerzo('tipo');
       setSegundoElegido('');
+      setSopaElegida('');
     } else {
       agregarAlCarritoNormal(plato);
     }
@@ -263,10 +267,11 @@ export default function ClientMenu() {
     if (esTonga) {
       const esGranja = tipoGallina.toLowerCase().includes('granja');
       precioBase = esGranja ? 2.75 : 5.00;
-    }
-
-    if (tipoEntrega === 'llevar') {
-      precioBase += 0.25;
+      // Excluido el recargo de +$0.25 para llevar en la Tonga
+    } else {
+      if (tipoEntrega === 'llevar') {
+        precioBase += 0.25;
+      }
     }
 
     const detalles = `${tipoGallina ? tipoGallina + ' ' : ''}(${presa})${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
@@ -308,16 +313,21 @@ export default function ClientMenu() {
     }
   };
 
-  const finalizarAlmuerzo = (sopaOBebida: string) => {
+  const finalizarAlmuerzo = (bebidaFinal: string) => {
     if (!almuerzoSeleccionado) return;
 
     mostrarCheckCentral('Añadido');
 
     let detalles = '';
     const tagLlevar = tipoEntrega === 'llevar' ? ' [TARRINA]' : '';
-    if (tipoAlmuerzo === 'completo') detalles = `Completo: ${segundoElegido} + ${sopaOBebida}${tagLlevar}`;
-    if (tipoAlmuerzo === 'segundo') detalles = `Solo Segundo: ${segundoElegido}${tagLlevar}`;
-    if (tipoAlmuerzo === 'caldo') detalles = `Solo Caldo: ${sopaOBebida}${tagLlevar}`;
+    
+    if (tipoAlmuerzo === 'completo') {
+      detalles = `Completo: ${segundoElegido} + ${sopaElegida} + ${bebidaFinal}${tagLlevar}`;
+    } else if (tipoAlmuerzo === 'segundo') {
+      detalles = `Solo Segundo: ${segundoElegido} + ${bebidaFinal}${tagLlevar}`;
+    } else if (tipoAlmuerzo === 'caldo') {
+      detalles = `Solo Caldo: ${bebidaFinal}${tagLlevar}`;
+    }
 
     const idUnico = `${almuerzoSeleccionado.id}-${detalles.replace(/\s+/g, '-')}`;
     const platoModificado = { ...almuerzoSeleccionado, precio: almuerzoPrecio };
@@ -478,6 +488,7 @@ export default function ClientMenu() {
 
   const opcionesSegundos = platos.filter(p => p.categoria === 'segundo');
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
+  const opcionesBebidas = platos.filter(p => p.categoria === 'bebida' || p.categoria === 'fijo');
 
   const opcionesGallinaTonga = platos.filter(p => p.categoria === 'tonga_gallina');
   const opcionesPresaTonga = platos.filter(p => p.categoria === 'tonga_presa');
@@ -626,27 +637,11 @@ export default function ClientMenu() {
                         key={s.id} 
                         disabled={!s.disponible}
                         onClick={() => { 
+                          setSegundoElegido(s.nombre);
                           if (tipoAlmuerzo === 'completo') { 
-                            setSegundoElegido(s.nombre);
                             setPasoAlmuerzo('caldo'); 
                           } else { 
-                            setSegundoElegido(s.nombre);
-                            if (!almuerzoSeleccionado) return;
-                            const detalles = `Solo Segundo: ${s.nombre}${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
-                            const idUnico = `${almuerzoSeleccionado.id}-${detalles.replace(/\s+/g, '-')}`;
-                            const platoModificado = { ...almuerzoSeleccionado, precio: almuerzoPrecio };
-
-                            setCarrito((prev) => {
-                              const existe = prev.find((item) => item.idUnico === idUnico);
-                              if (existe) {
-                                return prev.map((item) => item.idUnico === idUnico ? { ...item, grid: item.grid + 1 } : item);
-                              }
-                              return [...prev, { idUnico, plato: platoModificado, grid: 1, detallesPersonalizados: detalles, paraLlevar: tipoEntrega === 'llevar' }];
-                            });
-
-                            setConfigurandoAlmuerzo(false);
-                            setAlmuerzoSeleccionado(null);
-                            mostrarCheckCentral('Añadido');
+                            setPasoAlmuerzo('bebida');
                           } 
                         }} 
                         className={`p-3 border rounded-xl font-semibold text-left text-xs uppercase flex justify-between items-center shadow-sm transition-all ${
@@ -673,13 +668,29 @@ export default function ClientMenu() {
                 {tipoAlmuerzo === 'completo' && <p className="text-[11px] text-emerald-800 font-medium mb-3">Fuerte elegido: <span className="uppercase font-bold">{segundoElegido}</span></p>}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {opcionesCaldos.length === 0 ? (
-                    <button onClick={() => finalizarAlmuerzo('Sin sopa (Solo Bebida)')} className="p-3 bg-white border rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white transition text-center text-xs shadow-sm">No hay caldos hoy (Pasar directo)</button>
+                    <button 
+                      onClick={() => {
+                        setSopaElegida('Sin sopa');
+                        if (tipoAlmuerzo === 'completo') setPasoAlmuerzo('bebida');
+                        else finalizarAlmuerzo('Sin bebida');
+                      }} 
+                      className="p-3 bg-white border rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white transition text-center text-xs shadow-sm"
+                    >
+                      No hay caldos hoy (Pasar directo)
+                    </button>
                   ) : (
                     opcionesCaldos.map((c) => (
                       <button 
                         key={c.id} 
                         disabled={!c.disponible}
-                        onClick={() => finalizarAlmuerzo(c.nombre)} 
+                        onClick={() => {
+                          if (tipoAlmuerzo === 'completo') {
+                            setSopaElegida(c.nombre);
+                            setPasoAlmuerzo('bebida');
+                          } else {
+                            finalizarAlmuerzo(c.nombre);
+                          }
+                        }} 
                         className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
                           c.disponible 
                             ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
@@ -696,6 +707,43 @@ export default function ClientMenu() {
                 </div>
               </div>
             )}
+
+            {pasoAlmuerzo === 'bebida' && (
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-1">
+                  {tipoAlmuerzo === 'completo' ? '4. Selecciona la Bebida / Jugo de hoy:' : '3. Selecciona la Bebida / Jugo de hoy:'}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                  {opcionesBebidas.length === 0 ? (
+                    <button 
+                      onClick={() => finalizarAlmuerzo('Sin bebida')} 
+                      className="p-3 bg-white border rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white transition text-center text-xs shadow-sm"
+                    >
+                      Sin Bebida / Pasar Directo
+                    </button>
+                  ) : (
+                    opcionesBebidas.map((b) => (
+                      <button 
+                        key={b.id} 
+                        disabled={!b.disponible}
+                        onClick={() => finalizarAlmuerzo(b.nombre)} 
+                        className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
+                          b.disponible 
+                            ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                        }`}
+                      >
+                        <span className="flex items-center justify-center gap-2">
+                          <span>{b.nombre}</span>
+                          {!b.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 
@@ -850,8 +898,8 @@ export default function ClientMenu() {
             >
               <option value="">Selecciona una Mesa...</option>
               {Array.from({ length: 35 }, (_, i) => i + 1).map((num) => (
-  <option key={num} value={`${num}`}>{`MESA ${num}`}</option>
-))}
+                <option key={num} value={`${num}`}>{`MESA ${num}`}</option>
+              ))}
             </select>
           )}
         </div>
