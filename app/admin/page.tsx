@@ -62,6 +62,10 @@ export default function AdminPage() {
   const [estadoCaja, setEstadoCaja] = useState<'abierta' | 'cerrada'>('abierta');
   const [verDetalleModal, setVerDetalleModal] = useState(false);
 
+  // Estados para la edición directa de nombre de plato
+  const [idPlatoEditando, setIdPlatoEditando] = useState<string | null>(null);
+  const [nuevoNombrePlato, setNuevoNombrePlato] = useState('');
+
   const [listadoMeseras, setListadoMeseras] = useState<{ id: string; nombre: string }[]>([]);
   const [nuevaMesera, setNuevaMesera] = useState('');
 
@@ -161,6 +165,23 @@ export default function AdminPage() {
     } catch (err) {
       alert('Error al guardar el plato.');
     } finally { setCargando(false); }
+  };
+
+  const guardarNuevoNombre = async (id: string) => {
+    if (!nuevoNombrePlato.trim()) return alert('El nombre no puede estar vacío.');
+
+    const { error } = await supabase
+      .from('platos')
+      .update({ nombre: nuevoNombrePlato.trim() })
+      .eq('id', id);
+
+    if (!error) {
+      setIdPlatoEditando(null);
+      setNuevoNombrePlato('');
+      obtenerPlatos();
+    } else {
+      alert('Error al actualizar el nombre del plato.');
+    }
   };
 
   const alternarDisponibilidad = async (id: string, estadoActual: boolean) => {
@@ -451,91 +472,128 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* PLANIFICADOR MENÚ DIARIO REDISEÑADO CON TARJETAS ENCAJONADAS */}
-      <div className="md:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 flex flex-col justify-between shadow-sm h-full">
-        <div className="flex flex-col flex-1 min-h-0">
-          <div className="flex justify-between border-b border-gray-100 pb-4 mb-4 items-center shrink-0">
-            <h2 className="text-lg font-bold text-gray-950">Planificador del Menú del Día</h2>
-            <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold px-2.5 py-1 rounded-md uppercase">Índice Activo</span>
-          </div>
+      {/* PLANIFICADOR MENÚ DIARIO REDISEÑADO (SIN ESPACIO EN BLANCO Y CON EDICIÓN DE NOMBRE) */}
+      <div className="md:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 flex flex-col h-fit shadow-sm">
+        <div className="flex justify-between border-b border-gray-100 pb-4 mb-4 items-center">
+          <h2 className="text-lg font-bold text-gray-950">Planificador del Menú del Día</h2>
+          <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold px-2.5 py-1 rounded-md uppercase">Índice Activo</span>
+        </div>
 
-          <div className="space-y-3 overflow-y-auto pr-1.5 pb-2 max-h-[580px] flex-1">
-            {platosPlanificadorVisibles.map((plato) => {
-              const esFijo = esPlatoFijoInmutable(plato.nombre, plato.categoria);
-              const marcado = esFijo || platosSeleccionados.includes(plato.id);
+        <div className="space-y-3 overflow-y-auto pr-1.5 pb-2 max-h-[520px]">
+          {platosPlanificadorVisibles.map((plato) => {
+            const esFijo = esPlatoFijoInmutable(plato.nombre, plato.categoria);
+            const marcado = esFijo || platosSeleccionados.includes(plato.id);
 
-              return (
-                <div 
-                  key={plato.id} 
-                  className={`p-3.5 border rounded-2xl flex justify-between items-center transition-all gap-4 shadow-sm ${
-                    marcado ? 'bg-emerald-50/40 border-emerald-200' : 'bg-gray-50/60 border-gray-200 hover:border-gray-300 hover:bg-white'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3.5 flex-1 min-w-0">
-                    <button 
-                      type="button"
-                      onClick={() => alternarSeleccionPlato(plato.id, plato.nombre, plato.categoria)} 
-                      className="flex items-center justify-center text-gray-400 hover:text-emerald-700 transition-colors focus:outline-none shrink-0"
-                    >
-                      {marcado ? (
-                        <CheckSquare className={`h-5 w-5 ${esFijo ? 'text-gray-400' : 'text-emerald-700'}`} />
-                      ) : (
-                        <Square className="h-5 w-5 text-gray-300" />
-                      )}
-                    </button>
+            return (
+              <div 
+                key={plato.id} 
+                className={`p-3.5 border rounded-2xl flex justify-between items-center transition-all gap-4 shadow-sm ${
+                  marcado ? 'bg-emerald-50/40 border-emerald-200' : 'bg-gray-50/60 border-gray-200 hover:border-gray-300 hover:bg-white'
+                }`}
+              >
+                <div className="flex items-center space-x-3.5 flex-1 min-w-0">
+                  <button 
+                    type="button"
+                    onClick={() => alternarSeleccionPlato(plato.id, plato.nombre, plato.categoria)} 
+                    className="flex items-center justify-center text-gray-400 hover:text-emerald-700 transition-colors focus:outline-none shrink-0"
+                  >
+                    {marcado ? (
+                      <CheckSquare className={`h-5 w-5 ${esFijo ? 'text-gray-400' : 'text-emerald-700'}`} />
+                    ) : (
+                      <Square className="h-5 w-5 text-gray-300" />
+                    )}
+                  </button>
 
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-bold text-sm capitalize text-gray-950 truncate">{plato.nombre}</h4>
-                      <div className="mt-1 flex items-center space-x-1">
-                        <select 
-                          value={plato.categoria || 'segundo'} 
-                          onChange={(e) => cambiarCategoriaPlato(plato.id, e.target.value)}
-                          className="text-[11px] font-bold text-gray-600 bg-white border border-gray-200 rounded-lg px-2 py-0.5 outline-none focus:border-emerald-600 transition shadow-sm"
+                  <div className="min-w-0 flex-1">
+                    {idPlatoEditando === plato.id ? (
+                      <div className="flex items-center gap-1.5 my-0.5">
+                        <input 
+                          type="text" 
+                          value={nuevoNombrePlato} 
+                          onChange={(e) => setNuevoNombrePlato(e.target.value)} 
+                          className="text-xs font-bold border border-emerald-600 rounded-lg px-2 py-1 bg-white outline-none text-gray-900 w-full shadow-inner"
+                          autoFocus
+                        />
+                        <button 
+                          type="button" 
+                          onClick={() => guardarNuevoNombre(plato.id)} 
+                          className="bg-emerald-700 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-lg hover:bg-emerald-800 shrink-0"
                         >
-                          <option value="segundo">🥩 Segundo</option>
-                          <option value="caldo">🥣 Caldo</option>
-                          <option value="fijo">🍃 Fijo</option>
-                          <option value="jugo">🧃 Jugo del Día</option>
-                          <option value="bebida">🥤 Bebida Comercial</option>
-                        </select>
+                          💾
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => setIdPlatoEditando(null)} 
+                          className="text-gray-400 hover:text-gray-600 text-xs font-bold shrink-0 px-1"
+                        >
+                          ✕
+                        </button>
                       </div>
+                    ) : (
+                      <h4 className="font-bold text-sm capitalize text-gray-950 truncate">{plato.nombre}</h4>
+                    )}
+
+                    <div className="mt-1 flex items-center space-x-1">
+                      <select 
+                        value={plato.categoria || 'segundo'} 
+                        onChange={(e) => cambiarCategoriaPlato(plato.id, e.target.value)}
+                        className="text-[11px] font-bold text-gray-600 bg-white border border-gray-200 rounded-lg px-2 py-0.5 outline-none focus:border-emerald-600 transition shadow-sm"
+                      >
+                        <option value="segundo">🥩 Segundo</option>
+                        <option value="caldo">🥣 Caldo</option>
+                        <option value="fijo">🍃 Fijo</option>
+                        <option value="jugo">🧃 Jugo del Día</option>
+                        <option value="bebida">🥤 Bebida Comercial</option>
+                      </select>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-2 shrink-0">
-                    <button 
-                      type="button"
-                      onClick={() => alternarDisponibilidad(plato.id, plato.disponible)}
-                      className={`p-2 rounded-xl border flex items-center justify-center transition-all ${
-                        plato.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100'
-                      }`}
-                      title={plato.disponible ? 'Marcar como Agotado' : 'Marcar como Disponible'}
-                    >
-                      {plato.disponible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                    </button>
-
-                    <button 
-                      type="button"
-                      onClick={() => eliminarPlato(plato.id, plato.nombre, plato.categoria)}
-                      className={`p-2 rounded-xl border transition-all flex items-center justify-center ${
-                        esFijo 
-                          ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' 
-                          : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
-                      }`}
-                      title={esFijo ? 'Eliminar Plato Fijo (Requiere Confirmación)' : 'Eliminar Plato Permanentemente'}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
                 </div>
-              );
-            })}
-          </div>
+                
+                <div className="flex items-center space-x-1.5 shrink-0">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setIdPlatoEditando(plato.id);
+                      setNuevoNombrePlato(plato.nombre);
+                    }}
+                    className="p-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all"
+                    title="Editar Nombre del Plato"
+                  >
+                    ✏️
+                  </button>
+
+                  <button 
+                    type="button"
+                    onClick={() => alternarDisponibilidad(plato.id, plato.disponible)}
+                    className={`p-2 rounded-xl border flex items-center justify-center transition-all ${
+                      plato.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100'
+                    }`}
+                    title={plato.disponible ? 'Marcar como Agotado' : 'Marcar como Disponible'}
+                  >
+                    {plato.disponible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  </button>
+
+                  <button 
+                    type="button"
+                    onClick={() => eliminarPlato(plato.id, plato.nombre, plato.categoria)}
+                    className={`p-2 rounded-xl border transition-all flex items-center justify-center ${
+                      esFijo 
+                        ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' 
+                        : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                    }`}
+                    title={esFijo ? 'Eliminar Plato Fijo (Requiere Confirmación)' : 'Eliminar Plato Permanentemente'}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <button 
           onClick={guardarMenuDiario} 
-          className="w-full mt-4 bg-gray-950 text-white font-extrabold text-xs uppercase py-4 rounded-xl shadow-md hover:bg-gray-900 transition tracking-wider shrink-0"
+          className="w-full mt-4 bg-gray-950 text-white font-extrabold text-xs uppercase py-4 rounded-xl shadow-md hover:bg-gray-900 transition tracking-wider"
         >
           Establecer Menú Diario
         </button>
