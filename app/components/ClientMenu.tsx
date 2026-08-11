@@ -251,8 +251,23 @@ export default function ClientMenu() {
 
     mostrarCheckCentral('Seleccionado');
 
-    const detalles = `${tipoGallina} (${presa})`;
+    // 1. Calculamos el precio dinámico según el tipo de gallina elegido
+    const esGranja = tipoGallina.toLowerCase().includes('granja');
+    let precioBase = esGranja ? 2.75 : 5.00;
+
+    // 2. Sumamos el recargo si la orden es para llevar
+    if (tipoEntrega === 'llevar') {
+      precioBase += 0.25;
+    }
+
+    const detalles = `${tipoGallina} (${presa})${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
     const idUnico = `${tongaSeleccionada.id}-${detalles.replace(/\s+/g, '-')}`;
+
+    // 3. Asignamos el precio calculado al objeto del plato
+    const tongaConPrecioCalculado = {
+      ...tongaSeleccionada,
+      precio: precioBase
+    };
 
     setCarrito((prev) => {
       const existe = prev.find((item) => item.idUnico === idUnico);
@@ -261,7 +276,7 @@ export default function ClientMenu() {
           item.idUnico === idUnico ? { ...item, grid: item.grid + 1 } : item
         );
       }
-      return [...prev, { idUnico, plato: tongaSeleccionada, grid: 1, detallesPersonalizados: detalles }];
+      return [...prev, { idUnico, plato: tongaConPrecioCalculado, grid: 1, detallesPersonalizados: detalles }];
     });
 
     setConfigurandoTonga(false);
@@ -785,7 +800,15 @@ export default function ClientMenu() {
                   {!plato.disponible && <span className="inline-block bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1.5 uppercase">Agotado</span>}
                 </div>
                 <div className="flex justify-between items-center mt-5">
-                  <span className="text-base font-black text-emerald-800">${Number(plato.precio).toFixed(2)}</span>
+                  {plato.nombre.toLowerCase().includes('tonga') ? (
+  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
+    Precio según elección
+  </span>
+) : (
+  <span className="text-base font-black text-emerald-800">
+    ${Number(plato.precio).toFixed(2)}
+  </span>
+)}
                   <button
                     onClick={() => plato.disponible && handleAgregarClick(plato)}
                     disabled={!plato.disponible}
