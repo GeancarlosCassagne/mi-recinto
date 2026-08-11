@@ -223,19 +223,24 @@ export default function CocinaPage() {
                   </div>
 
                   <div className="p-4 space-y-3">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Platos a Servir</p>
-                    <div className="space-y-2">
-                      {p.detalles_pedido?.map((det, idx) => (
-                        <div key={idx} className="flex justify-between items-start text-sm bg-slate-900/40 p-2.5 border border-slate-700/30 rounded-xl">
-                          <p className={`font-bold capitalize ${estaDespachado ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
-                            • {det.platos?.nombre}
-                          </p>
-                          <span className={`font-black text-xs px-2 py-0.5 rounded-lg shrink-0 ${estaDespachado ? 'bg-slate-800 text-slate-500 border border-slate-700' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
-                            x{det.cantidad}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+  {/* Solo mostramos Platos a Servir en pedidos simples (sin detalles de almuerzo/tonga) */}
+  {especificaciones.length === 0 && (
+    <div>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Platos a Servir</p>
+      <div className="space-y-2">
+        {p.detalles_pedido?.map((det, idx) => (
+          <div key={idx} className="flex justify-between items-start text-sm bg-slate-900/40 p-2.5 border border-slate-700/30 rounded-xl">
+            <p className={`font-bold capitalize ${estaDespachado ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+              • {det.platos?.nombre}
+            </p>
+            <span className={`font-black text-xs px-2 py-0.5 rounded-lg shrink-0 ${estaDespachado ? 'bg-slate-800 text-slate-500 border border-slate-700' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+              x{det.cantidad}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
 
                     {adicionales && adicionales.length > 0 && (
                       <div className="mt-3 space-y-1">
@@ -313,15 +318,20 @@ export default function CocinaPage() {
               </div>
 
               <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumen de platos</p>
-                <div className="space-y-1.5">
-                  {pedidoAConfirmar.detalles_pedido?.map((det, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/50 p-2 rounded-lg border border-slate-750">
-                      <span className="font-bold text-slate-200 capitalize">{det.platos?.nombre}</span>
-                      <span className="bg-emerald-500/10 text-emerald-400 font-black px-2 py-0.5 rounded">x{det.cantidad}</span>
-                    </div>
-                  ))}
-                </div>
+  {/* Ocultamos el resumen simple si el pedido ya tiene detalles específicos */}
+  {especificaciones.length === 0 && (
+    <div>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Resumen de platos</p>
+      <div className="space-y-1.5">
+        {pedidoAConfirmar.detalles_pedido?.map((det, idx) => (
+          <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/50 p-2 rounded-lg border border-slate-750">
+            <span className="font-bold text-slate-200 capitalize">{det.platos?.nombre}</span>
+            <span className="bg-emerald-500/10 text-emerald-400 font-black px-2 py-0.5 rounded">x{det.cantidad}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
 
                 {adicionales && adicionales.length > 0 && (
                   <div className="mt-2 space-y-1">
