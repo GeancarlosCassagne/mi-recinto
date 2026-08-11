@@ -488,7 +488,17 @@ export default function ClientMenu() {
 
   const opcionesSegundos = platos.filter(p => p.categoria === 'segundo');
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
-  const opcionesBebidas = platos.filter(p => p.categoria === 'bebida' || p.categoria === 'fijo');
+  const opcionesBebidas = platos.filter(p => {
+  const cat = p.categoria;
+  const n = p.nombre.toLowerCase();
+  return cat === 'bebida' || 
+         n.includes('quaker') || 
+         n.includes('limon') || 
+         n.includes('jugo') || 
+         n.includes('mora') || 
+         n.includes('maracuya') || 
+         n.includes('chicha');
+});
 
   const opcionesGallinaTonga = platos.filter(p => p.categoria === 'tonga_gallina');
   const opcionesPresaTonga = platos.filter(p => p.categoria === 'tonga_presa');
