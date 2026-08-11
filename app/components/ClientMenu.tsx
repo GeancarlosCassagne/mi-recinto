@@ -33,11 +33,11 @@ const obtenerFechaLocal = () => {
   return new Date(d.getTime() - offset).toISOString().split('T')[0];
 };
 
-
 export default function ClientMenu() {
   const [platos, setPlatos] = useState<Plato[]>([]);
-  const [mesa, setMesa] = useState<string>(''); // Este estado guardará el número de mesa O el nombre del cliente
+  const [mesa, setMesa] = useState<string>(''); 
   const [mesera, setMesera] = useState<string>('');
+  const [listadoMeseras, setListadoMeseras] = useState<string[]>([]);
   const [carrito, setCarrito] = useState<CarritoItem[]>([]);
   const [tipoEntrega, setTipoEntrega] = useState<'servirse' | 'llevar'>('servirse');
   
@@ -65,15 +65,17 @@ export default function ClientMenu() {
   const [enviando, setEnviando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState(false);
 
-  const listadoMeseras = ['Claudia', 'Carolina', 'Sofia', 'Maria', 'Esperanza'];
-
-  // NUEVOS ESTADOS PARA PASAR A MODO EDICIÓN
   const [idPedidoAEditar, setIdPedidoAEditar] = useState<string | null>(null);
   const [pedidosActivos, setPedidosActivos] = useState<any[]>([]);
   const [mostrarListaModificar, setMostrarListaModificar] = useState(false);
 
   const mostrarCheckCentral = (texto: string) => {
     setNotificacion({ visible: true, mensaje: texto });
+  };
+
+  const obtenerMeserasCliente = async () => {
+    const { data } = await supabase.from('meseras').select('nombre').order('nombre', { ascending: true });
+    if (data) setListadoMeseras(data.map(m => m.nombre));
   };
 
   useEffect(() => {
@@ -139,13 +141,16 @@ export default function ClientMenu() {
         setPlatos(platosMapeados as Plato[]);
       }
     }
+
     inicializarMenu();
+    obtenerMeserasCliente();
 
     const canal = supabase
       .channel('cambios-menu-cliente')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'platos' }, () => inicializarMenu())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_diario' }, () => inicializarMenu())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cajas' }, () => inicializarMenu())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meseras' }, () => obtenerMeserasCliente())
       .subscribe();
 
     return () => {
@@ -163,7 +168,6 @@ export default function ClientMenu() {
       if (textoMesa.includes('[TIPO:SERVIR]')) textoMesa = textoMesa.replace('[TIPO:SERVIR]', '').trim();
     }
     
-    // Extraemos las especificaciones del string general guardado para reinyectarlas a la interfaz
     let especificacionExtra = '';
     if (textoMesa.includes('Especificaciones:')) {
       especificacionExtra = textoMesa.split('Especificaciones:')[1].replace(']', '').trim();
@@ -172,23 +176,19 @@ export default function ClientMenu() {
     textoMesa = textoMesa.split('[MESERA:')[0].trim();
     setMesa(textoMesa);
 
-    // Separamos las especificaciones por comas si hay múltiples almuerzos o combinaciones en la misma orden
     const combinacionesGuardadas = especificacionExtra.split(',').map(s => s.trim());
 
     const itemsCargados = pedido.detalles_pedido.map((det: any, index: number) => {
-      // Buscamos si este plato tiene una combinación específica guardada en la cabecera
       const coincidencia = combinacionesGuardadas.find(c => c.includes(det.platos.nombre));
       let detalles = undefined;
       
       if (coincidencia) {
-        // Extraemos lo que está dentro de los paréntesis: "Almuerzo Del Día (Completo: ...)" -> "Completo: ..."
         const match = coincidencia.match(/\(([^)]+)\)/);
         if (match && match[1]) {
           detalles = match[1];
         }
       }
 
-      // Generamos un idUnico consistente para que el contador de cantidad y variantes funcione sin cruzarse
       const idUnico = detalles 
         ? `${det.plato_id}-${detalles.replace(/\s+/g, '-')}` 
         : `${det.plato_id}-${index}`;
@@ -251,11 +251,9 @@ export default function ClientMenu() {
 
     mostrarCheckCentral('Seleccionado');
 
-    // 1. Calculamos el precio dinámico según el tipo de gallina elegido
     const esGranja = tipoGallina.toLowerCase().includes('granja');
     let precioBase = esGranja ? 2.75 : 5.00;
 
-    // 2. Sumamos el recargo si la orden es para llevar
     if (tipoEntrega === 'llevar') {
       precioBase += 0.25;
     }
@@ -263,7 +261,6 @@ export default function ClientMenu() {
     const detalles = `${tipoGallina} (${presa})${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
     const idUnico = `${tongaSeleccionada.id}-${detalles.replace(/\s+/g, '-')}`;
 
-    // 3. Asignamos el precio calculado al objeto del plato
     const tongaConPrecioCalculado = {
       ...tongaSeleccionada,
       precio: precioBase
@@ -359,7 +356,6 @@ export default function ClientMenu() {
   const revisarPedidoAntesDeConfirmar = () => {
     if (!mesera) return alert('Por favor, selecciona tu nombre de mesera en el banner superior.');
     
-    // MODIFICADO: Alerta contextualizada según el modo seleccionado
     if (!mesa.trim()) {
       return alert(tipoEntrega === 'llevar' ? 'Por favor, ingresa el nombre del cliente para llevar.' : 'Por favor, ingresa tu número de mesa.');
     }
@@ -393,50 +389,45 @@ export default function ClientMenu() {
       }
 
       if (idPedidoAEditar) {
-  // 1. Volvemos a armar la cabecera completa con los nuevos adicionales/notas si los hay
-  let mesaUpdate = `${prefijoTipo}${mesa.trim()} [MESERA: ${mesera}]`;
-  
-  if (adicionales.length > 0) {
-    const textoAdicionales = adicionales.map(a => `${a.descripcion} ($${a.precio.toFixed(2)})`).join(', ');
-    mesaUpdate = `${mesaUpdate} [EXTRA: ${textoAdicionales}]`;
-  }
+        let mesaUpdate = `${prefijoTipo}${mesa.trim()} [MESERA: ${mesera}]`;
+        
+        if (adicionales.length > 0) {
+          const textoAdicionales = adicionales.map(a => `${a.descripcion} ($${a.precio.toFixed(2)})`).join(', ');
+          mesaUpdate = `${mesaUpdate} [EXTRA: ${textoAdicionales}]`;
+        }
 
-  // 2. Inyectamos las especificaciones actualizadas de los platos a la cabecera
-  if (detallesExtrasTexto) {
-    const separador = mesaUpdate.includes('[EXTRA:') ? ' | ' : ' [EXTRA: ';
-    const cierre = mesaUpdate.includes('[EXTRA:') ? '' : ']';
-    mesaUpdate = `${mesaUpdate}${separador}Especificaciones: ${detallesExtrasTexto}${cierre}`;
-  }
+        if (detallesExtrasTexto) {
+          const separador = mesaUpdate.includes('[EXTRA:') ? ' | ' : ' [EXTRA: ';
+          const cierre = mesaUpdate.includes('[EXTRA:') ? '' : ']';
+          mesaUpdate = `${mesaUpdate}${separador}Especificaciones: ${detallesExtrasTexto}${cierre}`;
+        }
 
-  // 3. Enviamos el UPDATE a Supabase con la nueva cabecera (que lee cocina) y el nuevo valor total
-  const { error: errorUpdate } = await supabase
-    .from('pedidos')
-    .update({ 
-      mesa: mesaUpdate, 
-      total: total 
-    })
-    .eq('id', idPedidoAEditar);
+        const { error: errorUpdate } = await supabase
+          .from('pedidos')
+          .update({ 
+            mesa: mesaUpdate, 
+            total: total 
+          })
+          .eq('id', idPedidoAEditar);
 
-  if (errorUpdate) throw errorUpdate;
+        if (errorUpdate) throw errorUpdate;
 
-  // 4. Reemplazamos los platos viejos de la cocina por los nuevos del carrito
-  await supabase.from('detalles_pedido').delete().eq('pedido_id', idPedidoAEditar);
+        await supabase.from('detalles_pedido').delete().eq('pedido_id', idPedidoAEditar);
 
-  const detallesParaInsertar = carrito.map((item) => ({
-    pedido_id: idPedidoAEditar,
-    plato_id: item.plato.id,
-    cantidad: item.grid,
-    precio_unitario: item.plato.precio
-  }));
+        const detallesParaInsertar = carrito.map((item) => ({
+          pedido_id: idPedidoAEditar,
+          plato_id: item.plato.id,
+          cantidad: item.grid,
+          precio_unitario: item.plato.precio
+        }));
 
-  if (detallesParaInsertar.length > 0) {
-    const { error: errorInsertDetalles } = await supabase.from('detalles_pedido').insert(detallesParaInsertar);
-    if (errorInsertDetalles) throw errorInsertDetalles;
-  }
+        if (detallesParaInsertar.length > 0) {
+          const { error: errorInsertDetalles } = await supabase.from('detalles_pedido').insert(detallesParaInsertar);
+          if (errorInsertDetalles) throw errorInsertDetalles;
+        }
 
-  setIdPedidoAEditar(null);
+        setIdPedidoAEditar(null);
       } else {
-        // MODO NUEVO: INSERCIÓN LIMPIA ORIGINAL
         const { data: nuevoPedido, error: errorPedido } = await supabase
           .from('pedidos')
           .insert([{ mesa: mesaConAdicionales, total, estado: 'pendiente' }])
@@ -520,38 +511,37 @@ export default function ClientMenu() {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3 justify-center w-full sm:w-auto">
-  <select
-    value={mesera}
-    onChange={(e) => {
-      setMesera(e.target.value);
-      if (e.target.value) mostrarCheckCentral('Seleccionado');
-    }}
-    className="border border-emerald-200 text-emerald-950 font-bold text-xs rounded-xl p-2.5 bg-white outline-none focus:ring-2 focus:ring-emerald-700 w-full sm:w-44 shadow-sm"
-  >
-    <option value="">Seleccionar Mesera...</option>
-    {listadoMeseras.map((m) => (
-      <option key={m} value={m}>{m.toUpperCase()}</option>
-    ))}
-  </select>
+          <select
+            value={mesera}
+            onChange={(e) => {
+              setMesera(e.target.value);
+              if (e.target.value) mostrarCheckCentral('Seleccionado');
+            }}
+            className="border border-emerald-200 text-emerald-950 font-bold text-xs rounded-xl p-2.5 bg-white outline-none focus:ring-2 focus:ring-emerald-700 w-full sm:w-44 shadow-sm"
+          >
+            <option value="">Seleccionar Mesera...</option>
+            {listadoMeseras.map((m) => (
+              <option key={m} value={m}>{m.toUpperCase()}</option>
+            ))}
+          </select>
 
-  {/* Tu botón naranja de Editar Orden se mantiene al lado */}
-  <button 
-    onClick={async () => {
-      const hoy = new Date().toISOString().split('T')[0];
-      const { data } = await supabase
-        .from('pedidos')
-        .select('id, mesa, total, detalles_pedido(cantidad, plato_id, precio_unitario, platos(nombre))')
-        .eq('estado', 'pendiente')
-        .gte('created_at', `${hoy} 00:00:00`);
-      if (data) setPedidosActivos(data);
-      setMostrarListaModificar(true);
-    }}
-    className="bg-amber-600 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm hover:bg-amber-700 transition flex items-center gap-1 w-full sm:w-auto justify-center"
-  >
-    ✏️ Editar Orden
-  </button>
-</div>
-</div>
+          <button 
+            onClick={async () => {
+              const hoy = obtenerFechaLocal();
+              const { data } = await supabase
+                .from('pedidos')
+                .select('id, mesa, total, detalles_pedido(cantidad, plato_id, precio_unitario, platos(nombre))')
+                .eq('estado', 'pendiente')
+                .gte('created_at', `${hoy} 00:00:00`);
+              if (data) setPedidosActivos(data);
+              setMostrarListaModificar(true);
+            }}
+            className="bg-amber-600 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm hover:bg-amber-700 transition flex items-center gap-1 w-full sm:w-auto justify-center"
+          >
+            ✏️ Editar Orden
+          </button>
+        </div>
+      </div>
 
       {/* SECCIÓN DEL MENÚ */}
       <div className="md:col-span-2 space-y-6">
@@ -566,7 +556,7 @@ export default function ClientMenu() {
               type="button" 
               onClick={() => {
                 setTipoEntrega('servirse');
-                setMesa(''); // Limpia el campo al cambiar de pestaña
+                setMesa('');
               }} 
               className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${tipoEntrega === 'servirse' ? 'bg-white text-emerald-950 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
             >
@@ -577,7 +567,7 @@ export default function ClientMenu() {
               type="button" 
               onClick={() => {
                 setTipoEntrega('llevar');
-                setMesa(''); // Limpia el campo al cambiar de pestaña
+                setMesa('');
               }} 
               className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${tipoEntrega === 'llevar' ? 'bg-emerald-700 text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
             >
@@ -801,14 +791,14 @@ export default function ClientMenu() {
                 </div>
                 <div className="flex justify-between items-center mt-5">
                   {plato.nombre.toLowerCase().includes('tonga') ? (
-  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
-    Precio según elección
-  </span>
-) : (
-  <span className="text-base font-black text-emerald-800">
-    ${Number(plato.precio).toFixed(2)}
-  </span>
-)}
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
+                      Precio según elección
+                    </span>
+                  ) : (
+                    <span className="text-base font-black text-emerald-800">
+                      ${Number(plato.precio).toFixed(2)}
+                    </span>
+                  )}
                   <button
                     onClick={() => plato.disponible && handleAgregarClick(plato)}
                     disabled={!plato.disponible}
@@ -829,33 +819,30 @@ export default function ClientMenu() {
       <div className="border border-gray-200 rounded-2xl p-5 bg-gray-50 h-fit space-y-5">
         <div className="flex items-center space-x-2 border-b border-gray-200 pb-3"><ShoppingCart className="h-5 w-5 text-emerald-800" /><h2 className="text-lg font-bold text-gray-950">Tu Pedido</h2></div>
         
-        {/* MODIFICADO: Label e Input dinámicos en base al tipo de entrega */}
         <div>
           <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
             {tipoEntrega === 'llevar' ? 'Nombre del Cliente / Identificador' : 'Mesa / Identificador'}
           </label>
           {tipoEntrega === 'llevar' ? (
-  // Si es para llevar, dejamos el input abierto para poner el nombre del cliente
-  <input 
-    type="text" 
-    placeholder="Nombre del Cliente (Ej. Juan Pérez)" 
-    value={mesa} 
-    onChange={(e) => setMesa(e.target.value)} 
-    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm font-bold" 
-  />
-) : (
-  // Si es para servirse en local, se convierte en el desplegable del 1 al 20
-  <select
-    value={mesa}
-    onChange={(e) => setMesa(e.target.value)}
-    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm font-black text-gray-800"
-  >
-    <option value="">Selecciona una Mesa...</option>
-    {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
-      <option key={num} value={`${num}`}>{`MESA ${num}`}</option>
-    ))}
-  </select>
-)}
+            <input 
+              type="text" 
+              placeholder="Nombre del Cliente (Ej. Juan Pérez)" 
+              value={mesa} 
+              onChange={(e) => setMesa(e.target.value)} 
+              className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm font-bold" 
+            />
+          ) : (
+            <select
+              value={mesa}
+              onChange={(e) => setMesa(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm font-black text-gray-800"
+            >
+              <option value="">Selecciona una Mesa...</option>
+              {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
+                <option key={num} value={`${num}`}>{`MESA ${num}`}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="divide-y divide-gray-200/60 max-h-60 overflow-y-auto pr-1">
@@ -897,15 +884,15 @@ export default function ClientMenu() {
           <form onSubmit={agregarAdicionalALaLista} className="bg-white p-3 border border-gray-200 rounded-xl space-y-2 shadow-sm">
             <input type="text" placeholder="Ej. Cola Extra o Porción de Maní" value={descAdicional} onChange={(e) => setDescAdicional(e.target.value)} className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white" required />
             <select
-  value={precioAdicional}
-  onChange={(e) => setPrecioAdicional(e.target.value)}
-  className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white font-bold text-gray-700"
-  required
->
-  <option value="">Seleccionar Precio Adicional...</option>
-  <option value="0.50">{"$0.50 Centavos"}</option>
-  <option value="1.00">{"$1.00 Dólar"}</option>
-</select>
+              value={precioAdicional}
+              onChange={(e) => setPrecioAdicional(e.target.value)}
+              className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white font-bold text-gray-700"
+              required
+            >
+              <option value="">Seleccionar Precio Adicional...</option>
+              <option value="0.50">{"$0.50 Centavos"}</option>
+              <option value="1.00">{"$1.00 Dólar"}</option>
+            </select>
             <div className="flex gap-2 justify-end text-[11px] font-bold pt-1">
               <button type="button" onClick={() => setMostrarFormAdicional(false)} className="text-gray-400 hover:text-gray-600">Cancelar</button>
               <button type="submit" className="px-3 py-1 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition">Añadir</button>
@@ -915,8 +902,8 @@ export default function ClientMenu() {
 
         <div className="border-t border-gray-200 pt-3 flex justify-between items-center text-base font-black text-gray-950"><span>Total:</span><span className="text-emerald-800">${total.toFixed(2)}</span></div>
         <button onClick={revisarPedidoAntesDeConfirmar} disabled={enviando || (carrito.length === 0 && adicionales.length === 0)} className="w-full bg-emerald-700 text-white py-3 rounded-xl font-bold hover:bg-emerald-800 shadow-sm text-sm tracking-wide">
-    {enviando ? 'Procesando...' : idPedidoAEditar ? '💾 Guardar Cambios' : 'Confirmar Pedido'}
-  </button>
+          {enviando ? 'Procesando...' : idPedidoAEditar ? '💾 Guardar Cambios' : 'Confirmar Pedido'}
+        </button>
       </div>
 
       {/* MODAL CENTRAL DE CONFIRMACIÓN */}
@@ -932,7 +919,6 @@ export default function ClientMenu() {
               </div>
             </div>
 
-            {/* MODIFICADO: Label de confirmación dinámico en el resumen */}
             <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 grid grid-cols-2 gap-2 text-xs font-bold">
               <p className="text-gray-500">
                 {tipoEntrega === 'llevar' ? 'Cliente (Para Llevar):' : 'Mesa / Identificador:'} 
@@ -998,20 +984,17 @@ export default function ClientMenu() {
                 <p className="text-center text-gray-400 text-xs py-4 italic">No hay comandas pendientes en cocina hoy.</p>
               ) : (
                 pedidosActivos.map((ped) => {
-                  // 1. Extraemos limpiamente el número de mesa o cliente
                   let labelMesa = ped.mesa.includes('[TIPO:LLEVAR]') 
                     ? ped.mesa.split('[TIPO:LLEVAR]')[1].split('[MESERA:')[0].trim() 
                     : ped.mesa.split('[TIPO:SERVIR]')[1]?.split('[MESERA:')[0].trim() || ped.mesa;
                   if (labelMesa.includes('[EXTRA:')) labelMesa = labelMesa.split('[EXTRA:')[0].trim();
                   if (labelMesa.includes('Especificaciones:')) labelMesa = labelMesa.split('Especificaciones:')[0].trim();
 
-                  // 2. Extraemos el nombre de la mesera asignada a esta orden
                   let meseraOrden = 'No especificada';
                   if (ped.mesa.includes('[MESERA:')) {
                     meseraOrden = ped.mesa.split('[MESERA:')[1].split(']')[0].trim();
                   }
 
-                  // 3. Extraemos el texto de las especificaciones/combinaciones para listarlas abajo
                   let especificacionesTexto = '';
                   if (ped.mesa.includes('Especificaciones:')) {
                     especificacionesTexto = ped.mesa.split('Especificaciones:')[1].replace(']', '').trim();
@@ -1021,7 +1004,6 @@ export default function ClientMenu() {
                     <div key={ped.id} className="pt-3 first:pt-0">
                       <button 
                         onClick={() => {
-                          // Si queremos heredar automáticamente la mesera de la orden original al cargarla:
                           if (meseraOrden !== 'No especificada') setMesera(meseraOrden);
                           cargarPedidoEnCarrito(ped);
                         }}
@@ -1035,13 +1017,11 @@ export default function ClientMenu() {
                             <span className="font-mono font-black text-emerald-800 text-sm">${Number(ped.total).toFixed(2)}</span>
                           </div>
                           
-                          {/* Renderizado de la Mesera Responsable */}
                           <div className="flex items-center gap-1 text-[11px] text-gray-500 font-medium">
                             <User className="h-3 w-3 text-emerald-700" />
                             <span>Atendido por: <strong className="text-gray-700 uppercase font-bold">{meseraOrden}</strong></span>
                           </div>
 
-                          {/* Detalles resumidos de los platos cargados de la base de datos */}
                           <div className="space-y-0.5 bg-white border border-gray-100 rounded-lg p-2 mt-1">
                             <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Composición:</p>
                             {ped.detalles_pedido?.map((det: any, idx: number) => (
@@ -1051,7 +1031,6 @@ export default function ClientMenu() {
                               </p>
                             ))}
                             
-                            {/* Si tiene especificaciones detalladas de almuerzos (arroz, sopa, etc.) se listan aquí */}
                             {especificacionesTexto && (
                               <p className="text-[11px] text-amber-800 font-semibold italic border-t border-dashed mt-1.5 pt-1 capitalize">
                                 📝 {especificacionesTexto}

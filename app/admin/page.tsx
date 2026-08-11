@@ -26,7 +26,6 @@ interface Pedido {
   detalles_pedido: DetallePedido[];
 }
 
-
 // Obtiene la fecha local exacta (YYYY-MM-DD) sin sufrir por el desfase UTC
 const obtenerFechaLocal = () => {
   const d = new Date();
@@ -46,6 +45,33 @@ export default function AdminPage() {
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(obtenerFechaLocal());
   const [estadoCaja, setEstadoCaja] = useState<'abierta' | 'cerrada'>('abierta');
   const [verDetalleModal, setVerDetalleModal] = useState(false);
+
+  // Estados y funciones para la gestión dinámica de meseras
+  const [listadoMeseras, setListadoMeseras] = useState<{ id: string; nombre: string }[]>([]);
+  const [nuevaMesera, setNuevaMesera] = useState('');
+
+  const obtenerMeseras = async () => {
+    const { data } = await supabase.from('meseras').select('id, nombre').order('nombre', { ascending: true });
+    if (data) setListadoMeseras(data);
+  };
+
+  const guardarMesera = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevaMesera.trim()) return;
+    const { error } = await supabase.from('meseras').insert([{ nombre: nuevaMesera.trim() }]);
+    if (!error) {
+      setNuevaMesera('');
+      obtenerMeseras();
+    } else {
+      alert('Esa mesera ya existe o hubo un error.');
+    }
+  };
+
+  const eliminarMesera = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar a la mesera "${nombre}"?`)) return;
+    const { error } = await supabase.from('meseras').delete().eq('id', id);
+    if (!error) obtenerMeseras();
+  };
 
   const obtenerPlatos = async () => {
     const { data, error } = await supabase
@@ -86,6 +112,7 @@ export default function AdminPage() {
     obtenerPlatos();
     obtenerMenuDelDia(fechaSeleccionada);
     cargarDatosDelDia(fechaSeleccionada);
+    obtenerMeseras();
 
     // Canal en tiempo real para mantener sincronizado el panel de administración
     const canalAdmin = supabase
@@ -94,6 +121,7 @@ export default function AdminPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'platos' }, () => obtenerPlatos())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cajas' }, () => cargarDatosDelDia(fechaSeleccionada))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_diario' }, () => obtenerMenuDelDia(fechaSeleccionada))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meseras' }, () => obtenerMeseras())
       .subscribe();
 
     return () => {
@@ -236,7 +264,6 @@ export default function AdminPage() {
 
   const totalRecaudado = pedidosDia.filter(p => p.estado === 'entregado').reduce((acc, p) => acc + Number(p.total), 0);
 
-  // Filtramos la lista principal eliminando los componentes específicos internos de la Tonga
   const platosPlanificadorVisibles = platos.filter(p => p.categoria !== 'tonga_gallina' && p.categoria !== 'tonga_presa');
   const componentesTongaInternos = platos.filter(p => p.categoria === 'tonga_gallina' || p.categoria === 'tonga_presa');
 
@@ -257,48 +284,89 @@ export default function AdminPage() {
         <button onClick={manejarCierreCaja} className={`w-full sm:w-auto font-bold text-xs uppercase px-6 py-3.5 rounded-xl text-white ${estadoCaja === 'abierta' ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-700 hover:bg-slate-800'}`}>{estadoCaja === 'abierta' ? 'Finalizar Jornada' : 'Habilitar Jornada'}</button>
       </div>
 
-      {/* FORMULARIO ADICIÓN PLATO */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 h-fit shadow-sm space-y-6">
-        <div>
-          <h2 className="text-lg font-bold pb-4 border-b mb-5 flex items-center gap-2"><PlusCircle className="text-emerald-700 h-5 w-5" /> Registrar Plato Base</h2>
-          <form onSubmit={guardarPlato} className="space-y-4">
-            <div><label className="block text-xs font-bold text-gray-500 mb-1">Nombre del Plato</label><input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. Ceviche" /></div>
-            <div><label className="block text-xs font-bold text-gray-500 mb-1">Precio Unitario (USD)</label><input type="text" value={precio} onChange={(e) => setPrecio(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. 5.00" /></div>
-            
-            <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Tipo / Categoría de Plato</label>
-              <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700 font-medium text-gray-800">
-                <option value="segundo">🥩 Segundo (Plato Fuerte)</option>
-                <option value="caldo">🥣 Caldo / Sopa</option>
-                <option value="fijo">🥤 Fijo (Tonga, Almuerzo del Día, Bebidas)</option>
-              </select>
-            </div>
+      {/* FORMULARIO ADICIÓN PLATO Y GESTIÓN MESERAS */}
+      <div className="space-y-6">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 h-fit shadow-sm space-y-6">
+          <div>
+            <h2 className="text-lg font-bold pb-4 border-b mb-5 flex items-center gap-2"><PlusCircle className="text-emerald-700 h-5 w-5" /> Registrar Plato Base</h2>
+            <form onSubmit={guardarPlato} className="space-y-4">
+              <div><label className="block text-xs font-bold text-gray-500 mb-1">Nombre del Plato</label><input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. Ceviche" /></div>
+              <div><label className="block text-xs font-bold text-gray-500 mb-1">Precio Unitario (USD)</label><input type="text" value={precio} onChange={(e) => setPrecio(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. 5.00" /></div>
+              
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Tipo / Categoría de Plato</label>
+                <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700 font-medium text-gray-800">
+                  <option value="segundo">🥩 Segundo (Plato Fuerte)</option>
+                  <option value="caldo">🥣 Caldo / Sopa</option>
+                  <option value="fijo">🥤 Fijo (Tonga, Almuerzo del Día, Bebidas)</option>
+                </select>
+              </div>
 
-            <button type="submit" className="w-full bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl shadow-sm hover:bg-emerald-800 transition">Guardar en Banco General</button>
-          </form>
+              <button type="submit" className="w-full bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl shadow-sm hover:bg-emerald-800 transition">Guardar en Banco General</button>
+            </form>
+          </div>
+
+          <div className="border-t pt-5">
+            <h3 className="text-sm font-black text-gray-400 uppercase tracking-wider mb-3">Disponibilidad de Tonga</h3>
+            <div className="bg-slate-50 rounded-xl p-3 border space-y-2 max-h-[220px] overflow-y-auto">
+              {componentesTongaInternos.map((comp) => (
+                <div key={comp.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-lg border shadow-sm">
+                  <div>
+                    <p className="font-bold text-gray-900 capitalize">{comp.nombre}</p>
+                    <span className="text-[9px] text-gray-400 font-medium block">{comp.categoria === 'tonga_gallina' ? '🐓 Tipo Gallina' : '🍗 Presa'}</span>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => alternarDisponibilidad(comp.id, comp.disponible)}
+                    className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                      comp.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                    }`}
+                  >
+                    {comp.disponible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* NUEVO APARTADO: CONTROL DISPONIBILIDAD INGREDIENTES TONGA */}
-        <div className="border-t pt-5">
-          <h3 className="text-sm font-black text-gray-400 uppercase tracking-wider mb-3">Disponibilidad de Tonga</h3>
-          <div className="bg-slate-50 rounded-xl p-3 border space-y-2 max-h-[220px] overflow-y-auto">
-            {componentesTongaInternos.map((comp) => (
-              <div key={comp.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-lg border shadow-sm">
-                <div>
-                  <p className="font-bold text-gray-900 capitalize">{comp.nombre}</p>
-                  <span className="text-[9px] text-gray-400 font-medium block">{comp.categoria === 'tonga_gallina' ? '🐓 Tipo Gallina' : '🍗 Presa'}</span>
+        {/* MÓDULO GESTIÓN DE MESERAS */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
+          <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 border-b pb-3">
+            <User className="h-5 w-5 text-emerald-700" /> Personal de Servicio (Meseras)
+          </h2>
+
+          <form onSubmit={guardarMesera} className="flex gap-2">
+            <input 
+              type="text" 
+              value={nuevaMesera} 
+              onChange={(e) => setNuevaMesera(e.target.value)} 
+              placeholder="Nombre de mesera..." 
+              className="w-full border rounded-xl p-2.5 text-xs bg-white outline-none focus:border-emerald-700 font-bold text-gray-900"
+            />
+            <button type="submit" className="bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-emerald-800 transition shrink-0">
+              Agregar
+            </button>
+          </form>
+
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 pt-2">
+            {listadoMeseras.length === 0 ? (
+              <p className="text-xs text-gray-400 italic text-center py-2">No hay meseras registradas.</p>
+            ) : (
+              listadoMeseras.map((m) => (
+                <div key={m.id} className="flex justify-between items-center p-2.5 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold text-gray-800 uppercase">
+                  <span>👤 {m.nombre}</span>
+                  <button 
+                    type="button" 
+                    onClick={() => eliminarMesera(m.id, m.nombre)} 
+                    className="p-1 text-red-500 hover:text-red-700 transition"
+                    title="Eliminar mesera"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <button 
-                  type="button"
-                  onClick={() => alternarDisponibilidad(comp.id, comp.disponible)}
-                  className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
-                    comp.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
-                  }`}
-                >
-                  {comp.disponible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                </button>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -358,15 +426,15 @@ export default function AdminPage() {
                     </button>
 
                     {!esFijo && (
-  <button 
-    type="button"
-    onClick={() => eliminarPlato(plato.id, plato.nombre)}
-    className="p-2 rounded-xl border bg-red-50 border-red-200 text-red-600 hover:bg-red-100 transition-all flex items-center justify-center"
-    title="Eliminar Plato Permanentemente"
-  >
-    <Trash2 className="h-4 w-4" />
-  </button>
-)}
+                      <button 
+                        type="button"
+                        onClick={() => eliminarPlato(plato.id, plato.nombre)}
+                        className="p-2 rounded-xl border bg-red-50 border-red-200 text-red-600 hover:bg-red-100 transition-all flex items-center justify-center"
+                        title="Eliminar Plato Permanentemente"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -393,8 +461,8 @@ export default function AdminPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-black text-sm uppercase text-white">
-  {p.mesa.includes('[TIPO:LLEVAR]') ? `Cliente: ${numeroMesa}` : `Mesa ${numeroMesa}`}
-</p>
+                            {p.mesa.includes('[TIPO:LLEVAR]') ? `Cliente: ${numeroMesa}` : `Mesa ${numeroMesa}`}
+                          </p>
                           <span className="text-[9px] px-2 py-0.5 rounded-md font-bold bg-emerald-700 text-white flex items-center gap-1"><User className="h-2.5 w-2.5" /> {nombreMesera}</span>
                         </div>
                         <div className="space-y-1 mt-2 pl-1">
