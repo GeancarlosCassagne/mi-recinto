@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { CheckCircle, Clock, User, Bike, UtensilsCrossed, AlertCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Clock, User, Bike, UtensilsCrossed, AlertCircle, AlertTriangle, Lock } from 'lucide-react';
 
 interface DetallePedido {
   cantidad: number;
@@ -18,9 +18,24 @@ interface Pedido {
 }
 
 export default function CocinaPage() {
+  // Estados para contraseña y acceso restringido COCINA
+  const [autenticado, setAutenticado] = useState(false);
+  const [passInput, setPassInput] = useState('');
+  const [errorPass, setErrorPass] = useState(false);
+  const CLAVE_ACCESO = '5678';
+
+  const validarAcceso = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passInput === CLAVE_ACCESO) {
+      setAutenticado(true);
+      setErrorPass(false);
+    } else {
+      setErrorPass(true);
+      setPassInput('');
+    }
+  };
+
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  
-  // El estado almacena el objeto completo del pedido seleccionado para mostrar sus detalles
   const [pedidoAConfirmar, setPedidoAConfirmar] = useState<Pedido | null>(null);
 
   const obtenerPedidosDelDia = async () => {
@@ -40,7 +55,6 @@ export default function CocinaPage() {
   useEffect(() => {
     obtenerPedidosDelDia();
     
-    // Canal en tiempo real para recibir pedidos y modificaciones de platos al instante
     const canalCocina = supabase
       .channel('realtime-cocina-flow')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => obtenerPedidosDelDia())
@@ -83,7 +97,6 @@ export default function CocinaPage() {
       especificaciones = parteEspecificaciones.split('|').map(s => s.trim()).filter(Boolean);
     }
     
-    // Extracción limpia para aislar las notas adicionales y evitar que absorba especificaciones
     if (textoMesa.includes('[EXTRA:')) {
       let parteExtras = textoMesa.split('[EXTRA:')[1];
       if (parteExtras.includes('Especificaciones:')) {
@@ -101,7 +114,50 @@ export default function CocinaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-6 w-full relative">
+    <div className="min-h-screen bg-slate-950 text-white p-6 w-full relative">
+
+      {/* BANNER DE BLOQUEO COCINA */}
+      {!autenticado && (
+        <div className="fixed inset-0 bg-slate-950/90 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6 text-white">
+            <div className="w-16 h-16 bg-blue-900/40 text-blue-400 rounded-2xl flex items-center justify-center mx-auto border border-blue-800/50 shadow-inner">
+              <Lock className="h-8 w-8" />
+            </div>
+            
+            <div className="space-y-2">
+              <h2 className="text-xl font-black text-white tracking-tight">Acceso de Cocina</h2>
+              <p className="text-xs text-slate-400 font-medium">
+                Estás intentando ingresar a la interfaz de <br/>
+                <strong className="text-blue-400 font-black uppercase text-sm">"Monitor de Cocina"</strong>
+              </p>
+            </div>
+
+            <form onSubmit={validarAcceso} className="space-y-4">
+              <div>
+                <input 
+                  type="password" 
+                  value={passInput} 
+                  onChange={(e) => setPassInput(e.target.value)}
+                  placeholder="Ingresa la contraseña de cocina..."
+                  className={`w-full border rounded-2xl p-3.5 text-center font-bold text-sm outline-none transition-all ${
+                    errorPass ? 'border-red-500 bg-red-950/50 text-red-200 focus:ring-2 focus:ring-red-500' : 'border-slate-700 bg-slate-950 text-white focus:border-blue-500'
+                  }`}
+                  autoFocus
+                />
+                {errorPass && <p className="text-[11px] font-bold text-red-400 mt-2">Contraseña incorrecta.</p>}
+              </div>
+
+              <button 
+                type="submit" 
+                className="w-full bg-blue-600 text-white font-extrabold text-xs uppercase py-4 rounded-2xl shadow-md hover:bg-blue-700 transition tracking-wider"
+              >
+                Acceder a Comandas
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       <header className="border-b border-slate-800 pb-4 mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-black tracking-tight text-slate-100 flex items-center gap-2">
           🍳 Monitor de Cocina <span className="text-emerald-400 font-medium text-sm bg-emerald-950/60 px-3 py-1 rounded-xl border border-emerald-900/50">Flujo General Diario</span>
@@ -177,7 +233,6 @@ export default function CocinaPage() {
                       ))}
                     </div>
 
-                    {/* LISTADO DE NOTAS / ADICIONALES DE LA ORDEN */}
                     {adicionales && adicionales.length > 0 && (
                       <div className="mt-3 space-y-1">
                         <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest mb-1">Notas / Adicionales:</p>
@@ -189,7 +244,6 @@ export default function CocinaPage() {
                       </div>
                     )}
 
-                    {/* DETALLES DE COMPOSICIÓN DEL ALMUERZO EN LA PARTE INFERIOR */}
                     {especificaciones.length > 0 && (
                       <div className="mt-4 border-t border-dashed border-slate-700 pt-3">
                         <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-1.5">Detalles del Pedido:</p>
@@ -224,7 +278,6 @@ export default function CocinaPage() {
         </div>
       )}
 
-      {/* MODAL CENTRAL DE CONFIRMACIÓN */}
       {pedidoAConfirmar && (() => {
         const { numeroMesa, esParaLlevar, mesera, especificaciones, adicionales } = desglosarCabeceraPedido(pedidoAConfirmar.mesa);
 
@@ -240,7 +293,6 @@ export default function CocinaPage() {
                 </div>
               </div>
 
-              {/* Cabecera del Pedido Dinámica */}
               <div className="bg-slate-900 rounded-xl p-3 border border-slate-750 flex justify-between items-center">
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold block uppercase">
@@ -256,7 +308,6 @@ export default function CocinaPage() {
                 </div>
               </div>
 
-              {/* Detalles de la Orden Inyectados */}
               <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumen de platos</p>
                 <div className="space-y-1.5">
@@ -268,7 +319,6 @@ export default function CocinaPage() {
                   ))}
                 </div>
 
-                {/* Adicionales dentro del Modal */}
                 {adicionales && adicionales.length > 0 && (
                   <div className="mt-2 space-y-1">
                     <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Notas / Adicionales:</p>
@@ -280,7 +330,6 @@ export default function CocinaPage() {
                   </div>
                 )}
 
-                {/* Especificaciones / Notas si existen */}
                 {especificaciones.length > 0 && (
                   <div className="mt-2 bg-slate-900/40 rounded-xl p-2.5 border border-slate-750/60 space-y-1">
                     {especificaciones.map((item, index) => (
@@ -292,7 +341,6 @@ export default function CocinaPage() {
                 )}
               </div>
 
-              {/* Botonera */}
               <div className="flex items-center gap-3 pt-2 font-bold text-xs uppercase border-t border-slate-700/60">
                 <button 
                   onClick={() => setPedidoAConfirmar(null)}

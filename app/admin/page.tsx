@@ -26,7 +26,6 @@ interface Pedido {
   detalles_pedido: DetallePedido[];
 }
 
-// Obtiene la fecha local exacta (YYYY-MM-DD) sin sufrir por el desfase UTC
 const obtenerFechaLocal = () => {
   const d = new Date();
   const offset = d.getTimezoneOffset() * 60000;
@@ -34,6 +33,23 @@ const obtenerFechaLocal = () => {
 };
 
 export default function AdminPage() {
+  // Estados para contraseña y acceso restringido ADMIN
+  const [autenticado, setAutenticado] = useState(false);
+  const [passInput, setPassInput] = useState('');
+  const [errorPass, setErrorPass] = useState(false);
+  const CLAVE_ACCESO = '9999';
+
+  const validarAcceso = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passInput === CLAVE_ACCESO) {
+      setAutenticado(true);
+      setErrorPass(false);
+    } else {
+      setErrorPass(true);
+      setPassInput('');
+    }
+  };
+
   const [platos, setPlatos] = useState<Plato[]>([]);
   const [platosSeleccionados, setPlatosSeleccionados] = useState<string[]>([]);
   const [pedidosDia, setPedidosDia] = useState<Pedido[]>([]);
@@ -46,7 +62,6 @@ export default function AdminPage() {
   const [estadoCaja, setEstadoCaja] = useState<'abierta' | 'cerrada'>('abierta');
   const [verDetalleModal, setVerDetalleModal] = useState(false);
 
-  // Estados y funciones para la gestión dinámica de meseras
   const [listadoMeseras, setListadoMeseras] = useState<{ id: string; nombre: string }[]>([]);
   const [nuevaMesera, setNuevaMesera] = useState('');
 
@@ -114,7 +129,6 @@ export default function AdminPage() {
     cargarDatosDelDia(fechaSeleccionada);
     obtenerMeseras();
 
-    // Canal en tiempo real para mantener sincronizado el panel de administración
     const canalAdmin = supabase
       .channel('cambios-admin-panel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => cargarDatosDelDia(fechaSeleccionada))
@@ -279,6 +293,48 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-6 grid grid-cols-1 md:grid-cols-3 gap-8 w-full text-gray-900 max-w-7xl mx-auto">
       
+      {/* BANNER DE BLOQUEO ADMIN */}
+      {!autenticado && (
+        <div className="fixed inset-0 bg-slate-950/85 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white border border-gray-100 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6">
+            <div className="w-16 h-16 bg-amber-100 text-amber-800 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+              <Lock className="h-8 w-8" />
+            </div>
+            
+            <div className="space-y-2">
+              <h2 className="text-xl font-black text-gray-950 tracking-tight">Acceso Administrativo</h2>
+              <p className="text-xs text-gray-500 font-medium">
+                Estás intentando ingresar a la interfaz de <br/>
+                <strong className="text-amber-800 font-black uppercase text-sm">"Panel de Administración"</strong>
+              </p>
+            </div>
+
+            <form onSubmit={validarAcceso} className="space-y-4">
+              <div>
+                <input 
+                  type="password" 
+                  value={passInput} 
+                  onChange={(e) => setPassInput(e.target.value)}
+                  placeholder="Ingresa clave de administrador..."
+                  className={`w-full border rounded-2xl p-3.5 text-center font-bold text-sm outline-none transition-all ${
+                    errorPass ? 'border-red-500 bg-red-50 text-red-900 focus:ring-2 focus:ring-red-400' : 'border-gray-200 bg-gray-50 focus:border-amber-700 focus:bg-white'
+                  }`}
+                  autoFocus
+                />
+                {errorPass && <p className="text-[11px] font-bold text-red-600 mt-2">Clave administrativa incorrecta.</p>}
+              </div>
+
+              <button 
+                type="submit" 
+                className="w-full bg-slate-900 text-white font-extrabold text-xs uppercase py-4 rounded-2xl shadow-md hover:bg-slate-800 transition tracking-wider"
+              >
+                Desbloquear Panel
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* HEADER DE CONTROL */}
       <div className="md:col-span-3 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-6">
         <div className="flex items-center space-x-3 w-full sm:w-auto">
