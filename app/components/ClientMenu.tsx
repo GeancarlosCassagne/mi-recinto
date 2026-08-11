@@ -135,12 +135,12 @@ export default function ClientMenu() {
         });
 
         const platosMapeados = platosFiltrados.map(p => {
-          const deMenuDiario = datosMenuDiario?.find((d: any) => d.plato_id === p.id) as any;
-          return {
-            ...p,
-            categoria: p.categoria || deMenuDiario?.platos?.categoria || 'segundo'
-          };
-        });
+  const deMenuDiario = datosMenuDiario?.find((d: any) => d.plato_id === p.id) as any;
+  return {
+    ...p,
+    categoria: p.categoria || deMenuDiario?.platos?.categoria || 'segundo'
+  };
+});
 
         setPlatos(platosMapeados as Plato[]);
       }

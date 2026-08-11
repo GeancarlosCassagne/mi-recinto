@@ -408,15 +408,16 @@ export default function AdminPage() {
                     <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-sm capitalize text-gray-950 truncate">{plato.nombre}</h4>
                       <div className="mt-1 flex items-center space-x-1">
-                        <select 
-                          value={plato.categoria || 'segundo'} 
-                          onChange={(e) => cambiarCategoriaPlato(plato.id, e.target.value)}
-                          className="text-[11px] font-bold text-gray-500 bg-gray-100 border border-gray-200 rounded-lg px-1.5 py-0.5 outline-none focus:border-emerald-600 transition"
-                        >
-                          <option value="segundo">🥩 Segundo</option>
-                          <option value="caldo">🥣 Caldo</option>
-                          <option value="fijo">🥤 Fijo</option>
-                        </select>
+                       <select 
+  value={plato.categoria || 'segundo'} 
+  onChange={(e) => cambiarCategoriaPlato(plato.id, e.target.value)}
+  className="text-[11px] font-bold text-gray-500 bg-gray-100 border border-gray-200 rounded-lg px-1.5 py-0.5 outline-none focus:border-emerald-600 transition"
+>
+  <option value="segundo">🥩 Segundo</option>
+  <option value="caldo">🥣 Caldo</option>
+  <option value="fijo">🍃 Fijo</option>
+  <option value="bebida">🥤 Bebida</option> {/* 👈 AGREGA ESTA LÍNEA */}
+</select>
                       </div>
                     </div>
                   </div>
