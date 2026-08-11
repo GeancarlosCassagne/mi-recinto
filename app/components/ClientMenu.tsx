@@ -90,78 +90,72 @@ export default function ClientMenu() {
 
   useEffect(() => {
     async function inicializarMenu() {
-      const hoy = obtenerFechaLocal();
+  const hoy = obtenerFechaLocal();
+  
+  const { data: caja } = await supabase
+    .from('cajas')
+    .select('estado')
+    .eq('fecha', hoy)
+    .maybeSingle();
+    
+  if (caja?.estado === 'cerrada') {
+    setCajaCerradaHoy(true);
+  }
+
+  const { data: todosLosPlatos } = await supabase
+    .from('platos')
+    .select('id, nombre, precio, disponible, categoria');
+
+  const { data: datosMenuDiario, error } = await supabase
+    .from('menu_diario')
+    .select(`
+      plato_id,
+      platos (id, nombre, precio, disponible, categoria)
+    `)
+    .eq('fecha', hoy);
+  
+  if (!error && todosLosPlatos) {
+    const idsAsignados = datosMenuDiario ? datosMenuDiario.map((item: any) => item.plato_id) : [];
+    
+    const platosFiltrados = todosLosPlatos.filter(plato => {
+      const nombreLimpio = plato.nombre.toLowerCase();
+      // Un plato solo es permanente si es un componente estricto de Tonga o Almuerzo Base.
+      // Las Bebidas y los Caldos/Secos ahora respetan la lista activa de la jornada o asignación.
+      const esComponenteEstructural = plato.categoria === 'tonga_gallina' ||
+                                      plato.categoria === 'tonga_presa' ||
+                                      nombreLimpio.includes('almuerzo del día');
       
-      const { data: caja } = await supabase
-        .from('cajas')
-        .select('estado')
-        .eq('fecha', hoy)
-        .maybeSingle();
-        
-      if (caja?.estado === 'cerrada') {
-        setCajaCerradaHoy(true);
-      }
+      return esComponenteEstructural || idsAsignados.includes(plato.id);
+    });
 
-      const { data: todosLosPlatos } = await supabase
-        .from('platos')
-        .select('id, nombre, precio, disponible, categoria');
+    const platosMapeados = platosFiltrados.map(p => {
+      const deMenuDiario = datosMenuDiario?.find((d: any) => d.plato_id === p.id) as any;
+      return {
+        ...p,
+        categoria: p.categoria || deMenuDiario?.platos?.categoria || 'segundo'
+      };
+    });
 
-      const { data: datosMenuDiario, error } = await supabase
-        .from('menu_diario')
-        .select(`
-          plato_id,
-          platos (id, nombre, precio, disponible, categoria)
-        `)
-        .eq('fecha', hoy);
-      
-      if (!error && todosLosPlatos) {
-        const idsAsignados = datosMenuDiario ? datosMenuDiario.map((item: any) => item.plato_id) : [];
-        
-        const platosFiltrados = todosLosPlatos.filter(plato => {
-          const nombreLimpio = plato.nombre.toLowerCase();
-          const esFijo = plato.categoria === 'fijo' ||
-                         plato.categoria === 'bebida' ||
-                         plato.categoria === 'tonga_gallina' ||
-                         plato.categoria === 'tonga_presa' ||
-                         nombreLimpio.includes('tonga') || 
-                         nombreLimpio.includes('caldo criollo') || 
-                         nombreLimpio.includes('seco criollo') || 
-                         nombreLimpio.includes('almuerzo del día') || 
-                         nombreLimpio.includes('cola pequeña') || 
-                         nombreLimpio.includes('cola grande') || 
-                         nombreLimpio.includes('botella de agua');
-          
-          return esFijo || idsAsignados.includes(plato.id);
-        });
-
-        const platosMapeados = platosFiltrados.map(p => {
-  const deMenuDiario = datosMenuDiario?.find((d: any) => d.plato_id === p.id) as any;
-  return {
-    ...p,
-    categoria: p.categoria || deMenuDiario?.platos?.categoria || 'segundo'
-  };
-});
-
-        setPlatos(platosMapeados as Plato[]);
-      }
-    }
+    setPlatos(platosMapeados as Plato[]);
+  }
+}
 
     inicializarMenu();
     obtenerMeserasCliente();
 
     const canal = supabase
-      .channel('cambios-menu-cliente')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'platos' }, (payload) => {
-        // Si el evento en Supabase es un borrado, lo quitamos de inmediato de la lista sin esperar recarga
-        if (payload.eventType === 'DELETE') {
-          setPlatos((prev) => prev.filter((p) => p.id !== payload.old.id));
-        }
-        inicializarMenu();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_diario' }, () => inicializarMenu())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cajas' }, () => inicializarMenu())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'meseras' }, () => obtenerMeserasCliente())
-      .subscribe();
+  .channel('cambios-menu-cliente')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'platos' }, (payload) => {
+    if (payload.eventType === 'DELETE') {
+      // Remueve al instante el id eliminado del estado local
+      setPlatos((prev) => prev.filter((p) => p.id !== payload.old.id));
+    }
+    inicializarMenu();
+  })
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_diario' }, () => inicializarMenu())
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'cajas' }, () => inicializarMenu())
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'meseras' }, () => obtenerMeserasCliente())
+  .subscribe();
 
     return () => {
       supabase.removeChannel(canal);
