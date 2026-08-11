@@ -26,6 +26,14 @@ interface Adicional {
   precio: number;
 }
 
+// Obtiene la fecha local exacta (YYYY-MM-DD) sin sufrir por el desfase UTC
+const obtenerFechaLocal = () => {
+  const d = new Date();
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().split('T')[0];
+};
+
+
 export default function ClientMenu() {
   const [platos, setPlatos] = useState<Plato[]>([]);
   const [mesa, setMesa] = useState<string>(''); // Este estado guardará el número de mesa O el nombre del cliente
@@ -79,7 +87,7 @@ export default function ClientMenu() {
 
   useEffect(() => {
     async function inicializarMenu() {
-      const hoy = new Date().toISOString().split('T')[0];
+      const hoy = obtenerFechaLocal();
       
       const { data: caja } = await supabase
         .from('cajas')

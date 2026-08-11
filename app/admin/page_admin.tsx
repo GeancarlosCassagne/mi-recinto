@@ -26,6 +26,14 @@ interface Pedido {
   detalles_pedido: DetallePedido[];
 }
 
+
+// Obtiene la fecha local exacta (YYYY-MM-DD) sin sufrir por el desfase UTC
+const obtenerFechaLocal = () => {
+  const d = new Date();
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().split('T')[0];
+};
+
 export default function AdminPage() {
   const [platos, setPlatos] = useState<Plato[]>([]);
   const [platosSeleccionados, setPlatosSeleccionados] = useState<string[]>([]);
@@ -35,7 +43,7 @@ export default function AdminPage() {
   const [categoria, setCategoria] = useState('segundo');
   const [cargando, setCargando] = useState(false);
   
-  const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(obtenerFechaLocal());
   const [estadoCaja, setEstadoCaja] = useState<'abierta' | 'cerrada'>('abierta');
   const [verDetalleModal, setVerDetalleModal] = useState(false);
 
