@@ -94,7 +94,11 @@ export default function CocinaPage() {
     }
     if (textoMesa.includes('Especificaciones:')) {
       const parteEspecificaciones = textoMesa.split('Especificaciones:')[1].replace(']', '').trim();
-      especificaciones = parteEspecificaciones.split('|').map(s => s.trim()).filter(Boolean);
+      // Separa tanto por barra (|) como por coma (,) para que cada Tonga o Almuerzo sea una fila individual
+      especificaciones = parteEspecificaciones
+        .split(/,|\|/)
+        .map(s => s.trim())
+        .filter(Boolean);
     }
     
     if (textoMesa.includes('[EXTRA:')) {
@@ -366,9 +370,29 @@ export default function CocinaPage() {
 }
 
 function templatesTexto(spec: string[]) {
-  return spec.map((item, index) => (
-    <p key={index} className="text-xs text-amber-100/90 font-bold capitalize leading-relaxed pl-2.5 border-l-2 border-amber-500/40">
-      {item}
-    </p>
-  ));
+  return spec.map((item, index) => {
+    // Si el texto viene como "1x Tonga..." extrae la cantidad para ponerla en un botón/badge destacado
+    const partes = item.trim().split(/\s+(.+)/);
+    const tieneCantidad = partes[0] && partes[0].match(/^\d+x$/i);
+    const cantidad = tieneCantidad ? partes[0].toUpperCase() : null;
+    const textoDetalle = tieneCantidad ? partes[1] : item;
+
+    return (
+      <div 
+        key={index} 
+        className="flex items-center gap-2.5 bg-slate-900/90 border border-amber-500/30 p-2.5 rounded-xl text-xs font-bold text-amber-100 shadow-sm"
+      >
+        {cantidad ? (
+          <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-lg text-[11px] shrink-0">
+            {cantidad}
+          </span>
+        ) : (
+          <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+        )}
+        <span className="capitalize leading-snug flex-1 text-slate-100 font-extrabold tracking-wide">
+          {textoDetalle}
+        </span>
+      </div>
+    );
+  });
 }
