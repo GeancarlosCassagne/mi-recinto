@@ -197,6 +197,8 @@ export default function AdminPage() {
            catPlato === 'tonga_gallina' ||
            catPlato === 'tonga_presa' ||
            n.includes('tonga') || 
+           n.includes('caldo criollo') ||
+           n.includes('seco criollo') ||
            n.includes('almuerzo del día') || 
            n.includes('cola pequeña') || 
            n.includes('cola grande') || 

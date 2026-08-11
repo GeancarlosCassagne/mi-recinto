@@ -222,6 +222,12 @@ export default function ClientMenu() {
       setConfigurandoTonga(true);
       setPasoTonga('gallina');
       setTipoGallina('');
+    } else if (nombreLimpio.includes('caldo criollo') || nombreLimpio.includes('seco criollo')) {
+      // Abre directamente la selección de presas reutilizando el modal de la Tonga
+      setTongaSeleccionada(plato);
+      setConfigurandoTonga(true);
+      setPasoTonga('presa');
+      setTipoGallina(plato.nombre);
     } else if (nombreLimpio.includes('almuerzo del día')) {
       setAlmuerzoSeleccionado(plato);
       setConfigurandoAlmuerzo(true);
@@ -251,17 +257,22 @@ export default function ClientMenu() {
 
     mostrarCheckCentral('Seleccionado');
 
-    const esGranja = tipoGallina.toLowerCase().includes('granja');
-    let precioBase = esGranja ? 2.75 : 5.00;
+    const esTonga = tongaSeleccionada.nombre.toLowerCase().includes('tonga');
+    let precioBase = Number(tongaSeleccionada.precio);
+
+    if (esTonga) {
+      const esGranja = tipoGallina.toLowerCase().includes('granja');
+      precioBase = esGranja ? 2.75 : 5.00;
+    }
 
     if (tipoEntrega === 'llevar') {
       precioBase += 0.25;
     }
 
-    const detalles = `${tipoGallina} (${presa})${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
+    const detalles = `${tipoGallina ? tipoGallina + ' ' : ''}(${presa})${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
     const idUnico = `${tongaSeleccionada.id}-${detalles.replace(/\s+/g, '-')}`;
 
-    const tongaConPrecioCalculado = {
+    const platoConPrecioCalculado = {
       ...tongaSeleccionada,
       precio: precioBase
     };
@@ -273,7 +284,7 @@ export default function ClientMenu() {
           item.idUnico === idUnico ? { ...item, grid: item.grid + 1 } : item
         );
       }
-      return [...prev, { idUnico, plato: tongaConPrecioCalculado, grid: 1, detallesPersonalizados: detalles }];
+      return [...prev, { idUnico, plato: platoConPrecioCalculado, grid: 1, detallesPersonalizados: detalles }];
     });
 
     setConfigurandoTonga(false);
@@ -838,9 +849,9 @@ export default function ClientMenu() {
               className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm font-black text-gray-800"
             >
               <option value="">Selecciona una Mesa...</option>
-              {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
-                <option key={num} value={`${num}`}>{`MESA ${num}`}</option>
-              ))}
+              {Array.from({ length: 35 }, (_, i) => i + 1).map((num) => (
+  <option key={num} value={`${num}`}>{`MESA ${num}`}</option>
+))}
             </select>
           )}
         </div>
