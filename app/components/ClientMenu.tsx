@@ -26,7 +26,6 @@ interface Adicional {
   precio: number;
 }
 
-// Obtiene la fecha local exacta (YYYY-MM-DD) sin sufrir por el desfase UTC
 const obtenerFechaLocal = () => {
   const d = new Date();
   const offset = d.getTimezoneOffset() * 60000;
@@ -79,6 +78,57 @@ export default function ClientMenu() {
     if (data) setListadoMeseras(data.map(m => m.nombre));
   };
 
+  const inicializarMenu = async () => {
+    const hoy = obtenerFechaLocal();
+    
+    const { data: caja } = await supabase
+      .from('cajas')
+      .select('estado')
+      .eq('fecha', hoy)
+      .maybeSingle();
+      
+    if (caja?.estado === 'cerrada') {
+      setCajaCerradaHoy(true);
+    } else {
+      setCajaCerradaHoy(false);
+    }
+
+    const { data: todosLosPlatos } = await supabase
+      .from('platos')
+      .select('id, nombre, precio, disponible, categoria');
+
+    const { data: datosMenuDiario, error } = await supabase
+      .from('menu_diario')
+      .select(`
+        plato_id,
+        platos (id, nombre, precio, disponible, categoria)
+      `)
+      .eq('fecha', hoy);
+    
+    if (!error && todosLosPlatos) {
+      const idsAsignados = datosMenuDiario ? datosMenuDiario.map((item: any) => item.plato_id) : [];
+      
+      const platosFiltrados = todosLosPlatos.filter(plato => {
+        const nombreLimpio = plato.nombre.toLowerCase();
+        const esComponenteEstructural = plato.categoria === 'tonga_gallina' ||
+                                        plato.categoria === 'tonga_presa' ||
+                                        nombreLimpio.includes('almuerzo del día');
+        
+        return esComponenteEstructural || idsAsignados.includes(plato.id);
+      });
+
+      const platosMapeados = platosFiltrados.map(p => {
+        const deMenuDiario = datosMenuDiario?.find((d: any) => d.plato_id === p.id) as any;
+        return {
+          ...p,
+          categoria: p.categoria || deMenuDiario?.platos?.categoria || 'segundo'
+        };
+      });
+
+      setPlatos(platosMapeados as Plato[]);
+    }
+  };
+
   useEffect(() => {
     if (notificacion.visible) {
       const timer = setTimeout(() => {
@@ -89,73 +139,34 @@ export default function ClientMenu() {
   }, [notificacion.visible]);
 
   useEffect(() => {
-    async function inicializarMenu() {
-  const hoy = obtenerFechaLocal();
-  
-  const { data: caja } = await supabase
-    .from('cajas')
-    .select('estado')
-    .eq('fecha', hoy)
-    .maybeSingle();
-    
-  if (caja?.estado === 'cerrada') {
-    setCajaCerradaHoy(true);
-  }
-
-  const { data: todosLosPlatos } = await supabase
-    .from('platos')
-    .select('id, nombre, precio, disponible, categoria');
-
-  const { data: datosMenuDiario, error } = await supabase
-    .from('menu_diario')
-    .select(`
-      plato_id,
-      platos (id, nombre, precio, disponible, categoria)
-    `)
-    .eq('fecha', hoy);
-  
-  if (!error && todosLosPlatos) {
-    const idsAsignados = datosMenuDiario ? datosMenuDiario.map((item: any) => item.plato_id) : [];
-    
-    const platosFiltrados = todosLosPlatos.filter(plato => {
-      const nombreLimpio = plato.nombre.toLowerCase();
-      // Un plato solo es permanente si es un componente estricto de Tonga o Almuerzo Base.
-      // Las Bebidas y los Caldos/Secos ahora respetan la lista activa de la jornada o asignación.
-      const esComponenteEstructural = plato.categoria === 'tonga_gallina' ||
-                                      plato.categoria === 'tonga_presa' ||
-                                      nombreLimpio.includes('almuerzo del día');
-      
-      return esComponenteEstructural || idsAsignados.includes(plato.id);
-    });
-
-    const platosMapeados = platosFiltrados.map(p => {
-      const deMenuDiario = datosMenuDiario?.find((d: any) => d.plato_id === p.id) as any;
-      return {
-        ...p,
-        categoria: p.categoria || deMenuDiario?.platos?.categoria || 'segundo'
-      };
-    });
-
-    setPlatos(platosMapeados as Plato[]);
-  }
-}
-
     inicializarMenu();
     obtenerMeserasCliente();
 
+    // CANAL DE TIEMPO REAL TOTALMENTE REACTIVO
     const canal = supabase
-  .channel('cambios-menu-cliente')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'platos' }, (payload) => {
-    if (payload.eventType === 'DELETE') {
-      // Remueve al instante el id eliminado del estado local
-      setPlatos((prev) => prev.filter((p) => p.id !== payload.old.id));
-    }
-    inicializarMenu();
-  })
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_diario' }, () => inicializarMenu())
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'cajas' }, () => inicializarMenu())
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'meseras' }, () => obtenerMeserasCliente())
-  .subscribe();
+      .channel('cambios-menu-cliente-v2')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'platos' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          // Si se elimina un plato, se quita en vivo de la pantalla
+          setPlatos((prev) => prev.filter((p) => p.id !== payload.old.id));
+        } else if (payload.eventType === 'UPDATE') {
+          // Si se cambia la disponibilidad con el ojo, se actualiza en vivo en el cliente
+          setPlatos((prev) =>
+            prev.map((p) => (p.id === payload.new.id ? { ...p, ...payload.new } : p))
+          );
+        }
+        inicializarMenu();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_diario' }, () => {
+        inicializarMenu();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cajas' }, () => {
+        inicializarMenu();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meseras' }, () => {
+        obtenerMeserasCliente();
+      })
+      .subscribe();
 
     return () => {
       supabase.removeChannel(canal);
@@ -267,7 +278,6 @@ export default function ClientMenu() {
     if (esTonga) {
       const esGranja = tipoGallina.toLowerCase().includes('granja');
       precioBase = esGranja ? 2.75 : 5.00;
-      // Excluido el recargo de +$0.25 para llevar en la Tonga
     } else {
       if (tipoEntrega === 'llevar') {
         precioBase += 0.25;
@@ -489,16 +499,16 @@ export default function ClientMenu() {
   const opcionesSegundos = platos.filter(p => p.categoria === 'segundo');
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
   const opcionesBebidas = platos.filter(p => {
-  const cat = p.categoria;
-  const n = p.nombre.toLowerCase();
-  return cat === 'bebida' || 
-         n.includes('quaker') || 
-         n.includes('limon') || 
-         n.includes('jugo') || 
-         n.includes('mora') || 
-         n.includes('maracuya') || 
-         n.includes('chicha');
-});
+    const cat = p.categoria;
+    const n = p.nombre.toLowerCase();
+    return cat === 'bebida' || 
+           n.includes('quaker') || 
+           n.includes('limon') || 
+           n.includes('jugo') || 
+           n.includes('mora') || 
+           n.includes('maracuya') || 
+           n.includes('chicha');
+  });
 
   const opcionesGallinaTonga = platos.filter(p => p.categoria === 'tonga_gallina');
   const opcionesPresaTonga = platos.filter(p => p.categoria === 'tonga_presa');
