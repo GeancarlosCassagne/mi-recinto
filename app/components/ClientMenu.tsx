@@ -33,7 +33,6 @@ const obtenerFechaLocal = () => {
 };
 
 export default function ClientMenu() {
-  // Estados para contraseña y acceso restringido
   const [autenticado, setAutenticado] = useState(false);
   const [passInput, setPassInput] = useState('');
   const [errorPass, setErrorPass] = useState(false);
@@ -66,7 +65,7 @@ export default function ClientMenu() {
   const [notificacion, setNotificacion] = useState<{ visible: boolean; mensaje: string }>({ visible: false, mensaje: '' });
 
   const [configurandoTonga, setConfigurandoTonga] = useState(false);
-  const [pasoTonga, setPasoTonga] = useState<'gallina' | 'presa'>('gallina');
+  const [pasoTonga, setPasoTonga] = useState<'tipo' | 'presa'>('tipo');
   const [tongaSeleccionada, setTongaSeleccionada] = useState<Plato | null>(null);
   const [tipoGallina, setTipoGallina] = useState<string>('');
 
@@ -127,8 +126,9 @@ export default function ClientMenu() {
       
       const platosFiltrados = todosLosPlatos.filter(plato => {
         const nombreLimpio = plato.nombre.toLowerCase();
-        const esComponenteEstructural = plato.categoria === 'tonga_gallina' ||
-                                        plato.categoria === 'tonga_presa' ||
+        const esComponenteEstructural = plato.categoria === 'presa_criolla' ||
+                                        plato.categoria === 'presa_granja' ||
+                                        plato.categoria === 'presa_caldo' ||
                                         nombreLimpio.includes('almuerzo del día');
         
         return esComponenteEstructural || idsAsignados.includes(plato.id);
@@ -243,13 +243,23 @@ export default function ClientMenu() {
     if (nombreLimpio.includes('tonga')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
-      setPasoTonga('gallina');
+      setPasoTonga('tipo');
       setTipoGallina('');
-    } else if (nombreLimpio.includes('caldo criollo') || nombreLimpio.includes('seco criollo')) {
+    } else if (nombreLimpio.includes('seco criollo')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
-      setTipoGallina(plato.nombre);
+      setTipoGallina('Criolla');
+    } else if (nombreLimpio.includes('pollo horneado')) {
+      setTongaSeleccionada(plato);
+      setConfigurandoTonga(true);
+      setPasoTonga('presa');
+      setTipoGallina('Granja');
+    } else if (nombreLimpio.includes('caldo criollo')) {
+      setTongaSeleccionada(plato);
+      setConfigurandoTonga(true);
+      setPasoTonga('presa');
+      setTipoGallina('Caldo');
     } else if (nombreLimpio.includes('almuerzo del día')) {
       setAlmuerzoSeleccionado(plato);
       setConfigurandoAlmuerzo(true);
@@ -465,9 +475,6 @@ export default function ClientMenu() {
           if (errorInsertDetalles) throw errorInsertDetalles;
         }
 
-        
-
-        
         setIdPedidoAEditar(null);
       } else {
         const { data: nuevoPedido, error: errorPedido } = await supabase
@@ -497,7 +504,6 @@ export default function ClientMenu() {
       if (idPedidoAEditar) {
         mostrarCheckCentral('Pedido Guardado Exitosamente');
       } else {
-        // Muestra el popup flotante verde en el centro de la pantalla
         mostrarCheckCentral('El pedido se ha enviado correctamente a cocina');
       }
 
@@ -515,56 +521,59 @@ export default function ClientMenu() {
   const opcionesSegundos = platos.filter(p => p.categoria === 'segundo');
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
   const opcionesBebidas = platos.filter(p => {
-  const cat = p.categoria;
-  const n = p.nombre.toLowerCase();
-  
-  // Excluimos explícitamente colas, gaseosas y botellas comerciales (tienen costo extra)
-  const esColaOBebidaExtra = n.includes('cola') || 
-                             n.includes('litro') || 
-                             n.includes('personal') || 
-                             n.includes('vidrio') || 
-                             n.includes('plastico') || 
-                             n.includes('botella') ||
-                             n.includes('agua');
+    const cat = p.categoria;
+    const n = p.nombre.toLowerCase();
+    
+    const esColaOBebidaExtra = n.includes('cola') || 
+                               n.includes('litro') || 
+                               n.includes('personal') || 
+                               n.includes('vidrio') || 
+                               n.includes('plastico') || 
+                               n.includes('botella') ||
+                               n.includes('agua');
 
-  if (esColaOBebidaExtra) return false;
+    if (esColaOBebidaExtra) return false;
 
-  // Solo incluimos los jugos/refrescos caseros de la casa
-  return cat === 'jugo' || 
-         cat === 'bebida' || 
-         n.includes('quaker') || 
-         n.includes('limon') || 
-         n.includes('jugo') || 
-         n.includes('mora') || 
-         n.includes('maracuya') || 
-         n.includes('chicha') ||
-         n.includes('tamarindo') ||
-         n.includes('horchata');
-});
+    return cat === 'jugo' || 
+           cat === 'bebida' || 
+           n.includes('quaker') || 
+           n.includes('limon') || 
+           n.includes('jugo') || 
+           n.includes('mora') || 
+           n.includes('maracuya') || 
+           n.includes('chicha') ||
+           n.includes('tamarindo') ||
+           n.includes('horchata');
+  });
 
-  const opcionesGallinaTonga = platos.filter(p => p.categoria === 'tonga_gallina');
-  const opcionesPresaTonga = platos.filter(p => p.categoria === 'tonga_presa');
+  // 🟢 FILTRADO DINÁMICO DE PRESAS SEGÚN LA CATEGORÍA DE COCINA
+  const opcionesPresasSegunGallina = () => {
+    const t = tipoGallina.toLowerCase();
+    if (t.includes('criolla')) return platos.filter(p => p.categoria === 'presa_criolla');
+    if (t.includes('granja')) return platos.filter(p => p.categoria === 'presa_granja');
+    if (t.includes('caldo')) return platos.filter(p => p.categoria === 'presa_caldo');
+    return [];
+  };
 
   const platoAlmuerzoDelDia = platos.find(p => p.nombre.toLowerCase().includes('almuerzo del día'));
   
   const restoDePlatosCatalogo = platos
-  .filter(p => {
-    const n = p.nombre.toLowerCase();
-    // Filtramos para que se muestren en el catálogo inferior los jugos (para vender sueltos)
-    // y las bebidas comerciales (cola, agua, etc. que siempre son consumo extra)
-    return p.categoria !== 'segundo' && 
-           p.categoria !== 'caldo' && 
-           p.categoria !== 'tonga_gallina' && 
-           p.categoria !== 'tonga_presa' && 
-           !n.includes('almuerzo del día');
-  })
-  .sort((a, b) => {
-    const nameA = a.nombre.toLowerCase();
-    const nameB = b.nombre.toLowerCase();
-    if (nameA.includes('tonga')) return -1;
-    if (nameB.includes('tonga')) return 1;
-    return 0;
-  });
+    .filter(p => {
+      const n = p.nombre.toLowerCase();
+      return p.categoria !== 'segundo' && 
+             p.categoria !== 'caldo' && 
+             p.categoria !== 'presa_criolla' && 
+             p.categoria !== 'presa_granja' && 
+             p.categoria !== 'presa_caldo' && 
+             !n.includes('almuerzo del día');
+    })
+    .sort((a, b) => {
+      const nameA = a.nombre.toLowerCase();
+      const nameB = b.nombre.toLowerCase();
+      if (nameA.includes('tonga')) return -1;
+      if (nameB.includes('tonga')) return 1;
+      return 0;
+    });
 
   if (cajaCerradaHoy) {
     return (
@@ -581,7 +590,6 @@ export default function ClientMenu() {
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-8 relative text-gray-900 bg-white">
       
-      {/* BANNER DE BLOQUEO DE SEGURIDAD CLIENTE / MESERAS */}
       {!autenticado && (
         <div className="fixed inset-0 bg-slate-950/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white border border-gray-100 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6">
@@ -736,15 +744,14 @@ export default function ClientMenu() {
                       <button 
                         key={s.id} 
                         disabled={!s.disponible}
-                      onClick={() => { 
-  setSegundoElegido(s.nombre);
-  if (tipoAlmuerzo === 'completo') { 
-    setPasoAlmuerzo('caldo'); 
-  } else { 
-    // Si es "Solo Segundo", pasa directo a elegir el jugo sin alterar el precio de $2.50
-    setPasoAlmuerzo('bebida');
-  } 
-}} 
+                        onClick={() => { 
+                          setSegundoElegido(s.nombre);
+                          if (tipoAlmuerzo === 'completo') { 
+                            setPasoAlmuerzo('caldo'); 
+                          } else { 
+                            setPasoAlmuerzo('bebida');
+                          } 
+                        }} 
                         className={`p-3 border rounded-xl font-semibold text-left text-xs uppercase flex justify-between items-center shadow-sm transition-all ${
                           s.disponible 
                             ? 'bg-white text-gray-900 hover:bg-emerald-50/50' 
@@ -848,58 +855,61 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* MODAL CONFIGURADOR TONGA */}
+        {/* 🟢 MODAL CONFIGURADOR TONGA Y SECOS CON SELECCIÓN DE GALLINA Y PRESA VINCULADAS */}
         {configurandoTonga && (
           <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4">
             <div className="flex justify-between items-center border-b border-emerald-100 pb-3">
               <h3 className="text-base font-bold text-emerald-950 flex items-center gap-2"><span>Personalizando {tongaSeleccionada?.nombre}</span></h3>
               <button onClick={() => setConfigurandoTonga(false)} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
             </div>
-            {pasoTonga === 'gallina' ? (
+            {pasoTonga === 'tipo' ? (
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">1. Tipo de gallina</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">1. Tipo de preparación / Gallina</p>
                 <div className="grid grid-cols-2 gap-3">
-                  {opcionesGallinaTonga.map((g) => (
-                    <button 
-                      key={g.id} 
-                      disabled={!g.disponible}
-                      onClick={() => { setTipoGallina(g.nombre); setPasoTonga('presa'); }} 
-                      className={`p-3.5 border rounded-xl font-medium flex items-center justify-between text-sm shadow-sm transition-all ${
-                        g.disponible 
-                          ? 'bg-white text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30' 
-                          : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span>{g.nombre}</span>
-                        {!g.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
-                      </span>
-                      {g.disponible && <ChevronRight className="h-4 w-4 text-emerald-700" />}
-                    </button>
-                  ))}
+                  <button 
+                    onClick={() => { setTipoGallina('Criolla'); setPasoTonga('presa'); }} 
+                    className="p-3.5 border rounded-xl font-bold bg-white text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30 flex items-center justify-between text-sm shadow-sm"
+                  >
+                    <span>🐓 Gallina Criolla</span>
+                    <ChevronRight className="h-4 w-4 text-emerald-700" />
+                  </button>
+                  <button 
+                    onClick={() => { setTipoGallina('Granja'); setPasoTonga('presa'); }} 
+                    className="p-3.5 border rounded-xl font-bold bg-white text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30 flex items-center justify-between text-sm shadow-sm"
+                  >
+                    <span>🍗 Gallina de Granja</span>
+                    <ChevronRight className="h-4 w-4 text-emerald-700" />
+                  </button>
                 </div>
               </div>
             ) : (
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">2. Presa favorita</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {opcionesPresaTonga.map((p) => (
-                    <button 
-                      key={p.id} 
-                      disabled={!p.disponible}
-                      onClick={() => finalizarTonga(p.nombre)} 
-                      className={`p-3 border rounded-xl font-bold text-center text-sm shadow-sm transition-all ${
-                        p.disponible 
-                          ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
-                          : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                      }`}
-                    >
-                      <span className="flex flex-col items-center justify-center gap-1">
-                        <span>{p.nombre}</span>
-                        {!p.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase block">Agotado</span>}
-                      </span>
-                    </button>
-                  ))}
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">2. Presa disponible para {tipoGallina}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                  {opcionesPresasSegunGallina().length === 0 ? (
+                    <p className="text-xs text-gray-400 italic col-span-4 text-center py-3">No hay presas registradas para esta preparación.</p>
+                  ) : (
+                    opcionesPresasSegunGallina().map((p) => {
+                      const nombreLimpioPresa = p.nombre.replace(' Criolla', '').replace(' Granja', '').replace(' Caldo', '');
+                      return (
+                        <button 
+                          key={p.id} 
+                          disabled={!p.disponible}
+                          onClick={() => finalizarTonga(nombreLimpioPresa)} 
+                          className={`p-3 border rounded-xl font-bold text-center text-sm shadow-sm transition-all ${
+                            p.disponible 
+                              ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
+                              : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                          }`}
+                        >
+                          <span className="flex flex-col items-center justify-center gap-1">
+                            <span>{nombreLimpioPresa}</span>
+                            {!p.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase block">Agotado</span>}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}

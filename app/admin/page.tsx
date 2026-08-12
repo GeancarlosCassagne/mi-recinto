@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { PlusCircle, DollarSign, Calendar, ClipboardList, Lock, Unlock, X, Plus, Trash2, CheckSquare, Square, User, Eye, EyeOff } from 'lucide-react';
+import { PlusCircle, DollarSign, Calendar, ClipboardList, Lock, X, Trash2, CheckSquare, Square, User, Eye, EyeOff } from 'lucide-react';
 
 interface Plato {
   id: string;
@@ -33,7 +33,6 @@ const obtenerFechaLocal = () => {
 };
 
 export default function AdminPage() {
-  // Estados para contraseña y acceso restringido ADMIN
   const [autenticado, setAutenticado] = useState(false);
   const [passInput, setPassInput] = useState('');
   const [errorPass, setErrorPass] = useState(false);
@@ -62,7 +61,6 @@ export default function AdminPage() {
   const [estadoCaja, setEstadoCaja] = useState<'abierta' | 'cerrada'>('abierta');
   const [verDetalleModal, setVerDetalleModal] = useState(false);
 
-  // Estados para la edición directa de nombre y precio de plato
   const [idPlatoEditando, setIdPlatoEditando] = useState<string | null>(null);
   const [nuevoNombrePlato, setNuevoNombrePlato] = useState('');
   const [nuevoPrecioPlato, setNuevoPrecioPlato] = useState('');
@@ -218,8 +216,9 @@ export default function AdminPage() {
     return catPlato === 'fijo' || 
            catPlato === 'bebida' ||
            catPlato === 'jugo' ||
-           catPlato === 'tonga_gallina' ||
-           catPlato === 'tonga_presa' ||
+           catPlato === 'presa_criolla' ||
+           catPlato === 'presa_granja' ||
+           catPlato === 'presa_caldo' ||
            n.includes('tonga') || 
            n.includes('caldo criollo') ||
            n.includes('seco criollo') ||
@@ -324,13 +323,15 @@ export default function AdminPage() {
 
   const totalRecaudado = pedidosDia.filter(p => p.estado === 'entregado').reduce((acc, p) => acc + Number(p.total), 0);
 
-  const platosPlanificadorVisibles = platos.filter(p => p.categoria !== 'tonga_gallina' && p.categoria !== 'tonga_presa');
-  const componentesTongaInternos = platos.filter(p => p.categoria === 'tonga_gallina' || p.categoria === 'tonga_presa');
+  const platosPlanificadorVisibles = platos.filter(p => 
+    p.categoria !== 'presa_criolla' && 
+    p.categoria !== 'presa_granja' && 
+    p.categoria !== 'presa_caldo'
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-6 grid grid-cols-1 md:grid-cols-3 gap-8 w-full text-gray-900 max-w-7xl mx-auto">
       
-      {/* BANNER DE BLOQUEO ADMIN */}
       {!autenticado && (
         <div className="fixed inset-0 bg-slate-950/85 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white border border-gray-100 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6">
@@ -386,7 +387,7 @@ export default function AdminPage() {
         <button onClick={manejarCierreCaja} className={`w-full sm:w-auto font-bold text-xs uppercase px-6 py-3.5 rounded-xl text-white ${estadoCaja === 'abierta' ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-700 hover:bg-slate-800'}`}>{estadoCaja === 'abierta' ? 'Finalizar Jornada' : 'Habilitar Jornada'}</button>
       </div>
 
-      {/* FORMULARIO ADICIÓN PLATO Y GESTIÓN MESERAS */}
+      {/* COLUMNA IZQUIERDA: FORMULARIO + MÓDULOS DE DISPONIBILIDAD DE COCINA */}
       <div className="space-y-6">
         <div className="bg-white rounded-2xl border border-gray-200 p-6 h-fit shadow-sm space-y-6">
           <div>
@@ -414,26 +415,84 @@ export default function AdminPage() {
             </form>
           </div>
 
-          <div className="border-t pt-5">
-            <h3 className="text-sm font-black text-gray-400 uppercase tracking-wider mb-3">Disponibilidad de Tonga</h3>
-            <div className="bg-slate-50 rounded-xl p-3 border space-y-2 max-h-[220px] overflow-y-auto">
-              {componentesTongaInternos.map((comp) => (
-                <div key={comp.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-lg border shadow-sm">
-                  <div>
-                    <p className="font-bold text-gray-900 capitalize">{comp.nombre}</p>
-                    <span className="text-[9px] text-gray-400 font-medium block">{comp.categoria === 'tonga_gallina' ? '🐓 Tipo Gallina' : '🍗 Presa'}</span>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => alternarDisponibilidad(comp.id, comp.disponible)}
-                    className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
-                      comp.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
-                    }`}
-                  >
-                    {comp.disponible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                  </button>
+          {/* 🟢 MÓDULOS SEPARADOS DE DISPONIBILIDAD DE PRESAS */}
+          <div className="border-t pt-5 space-y-4">
+            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+              Control de Presas por Cocina
+            </h3>
+
+            <div className="grid grid-cols-1 gap-3">
+              {/* 1. PRESAS CRIOLLAS (TONGA CRIOLLA + SECO CRIOLLO) */}
+              <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-3.5 space-y-2">
+                <div className="flex justify-between items-center border-b border-amber-200/60 pb-1.5">
+                  <h4 className="text-xs font-black text-amber-950 uppercase">🐓 Presas Criollas</h4>
+                  <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">Tonga + Seco</span>
                 </div>
-              ))}
+                <div className="space-y-1.5">
+                  {platos.filter(p => p.categoria === 'presa_criolla').map((comp) => (
+                    <div key={comp.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-xl border border-amber-100 shadow-sm">
+                      <span className="font-bold text-gray-800 capitalize">{comp.nombre.replace(' Criolla', '')}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => alternarDisponibilidad(comp.id, comp.disponible)}
+                        className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                          comp.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'
+                        }`}
+                      >
+                        {comp.disponible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. PRESAS DE GRANJA (TONGA GRANJA + POLLO HORNEADO) */}
+              <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-3.5 space-y-2">
+                <div className="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
+                  <h4 className="text-xs font-black text-emerald-950 uppercase">🍗 Presas Granja</h4>
+                  <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">Tonga + Horneado</span>
+                </div>
+                <div className="space-y-1.5">
+                  {platos.filter(p => p.categoria === 'presa_granja').map((comp) => (
+                    <div key={comp.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-xl border border-emerald-100 shadow-sm">
+                      <span className="font-bold text-gray-800 capitalize">{comp.nombre.replace(' Granja', '')}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => alternarDisponibilidad(comp.id, comp.disponible)}
+                        className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                          comp.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'
+                        }`}
+                      >
+                        {comp.disponible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. PRESAS INDEPENDIENTES PARA CALDO */}
+              <div className="bg-blue-50/50 border border-blue-200 rounded-2xl p-3.5 space-y-2">
+                <div className="flex justify-between items-center border-b border-blue-200/60 pb-1.5">
+                  <h4 className="text-xs font-black text-blue-950 uppercase">🥣 Presas para Caldo</h4>
+                  <span className="text-[9px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded">Exclusivo Caldos</span>
+                </div>
+                <div className="space-y-1.5">
+                  {platos.filter(p => p.categoria === 'presa_caldo').map((comp) => (
+                    <div key={comp.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-xl border border-blue-100 shadow-sm">
+                      <span className="font-bold text-gray-800 capitalize">{comp.nombre.replace(' Caldo', '')}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => alternarDisponibilidad(comp.id, comp.disponible)}
+                        className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                          comp.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'
+                        }`}
+                      >
+                        {comp.disponible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -479,7 +538,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* PLANIFICADOR MENÚ DIARIO CON EDICIÓN DE NOMBRE Y PRECIO */}
+      {/* PLANIFICADOR MENÚ DIARIO REDISEÑADO */}
       <div className="md:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 flex flex-col h-fit shadow-sm">
         <div className="flex justify-between border-b border-gray-100 pb-4 mb-4 items-center">
           <h2 className="text-lg font-bold text-gray-950">Planificador del Menú del Día</h2>
@@ -639,7 +698,6 @@ export default function AdminPage() {
 
                   return (
                     <div key={p.id} className="py-4 border-b border-gray-100 last:border-0 space-y-3">
-                      {/* CABECERA: Ubicación + Mesera + Total */}
                       <div className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
                         <div className="flex items-center gap-2.5">
                           <span className={`text-xs font-black uppercase px-2.5 py-1 rounded-lg ${
@@ -656,7 +714,6 @@ export default function AdminPage() {
                         </span>
                       </div>
 
-                      {/* LISTA DE DETALLES O ESPECIFICACIONES DESGLOSADAS POR FILA */}
                       <div className="space-y-1.5 pl-1">
                         {listaExtras.length > 0 ? (
                           listaExtras.map((extra, idx) => (
