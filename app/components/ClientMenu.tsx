@@ -548,17 +548,23 @@ export default function ClientMenu() {
   const platoAlmuerzoDelDia = platos.find(p => p.nombre.toLowerCase().includes('almuerzo del día'));
   
   const restoDePlatosCatalogo = platos
-    .filter(p => {
-      const n = p.nombre.toLowerCase();
-      return p.categoria !== 'segundo' && p.categoria !== 'caldo' && p.categoria !== 'tonga_gallina' && p.categoria !== 'tonga_presa' && !n.includes('almuerzo del día');
-    })
-    .sort((a, b) => {
-      const nameA = a.nombre.toLowerCase();
-      const nameB = b.nombre.toLowerCase();
-      if (nameA.includes('tonga')) return -1;
-      if (nameB.includes('tonga')) return 1;
-      return 0;
-    });
+  .filter(p => {
+    const n = p.nombre.toLowerCase();
+    // Filtramos para que se muestren en el catálogo inferior los jugos (para vender sueltos)
+    // y las bebidas comerciales (cola, agua, etc. que siempre son consumo extra)
+    return p.categoria !== 'segundo' && 
+           p.categoria !== 'caldo' && 
+           p.categoria !== 'tonga_gallina' && 
+           p.categoria !== 'tonga_presa' && 
+           !n.includes('almuerzo del día');
+  })
+  .sort((a, b) => {
+    const nameA = a.nombre.toLowerCase();
+    const nameB = b.nombre.toLowerCase();
+    if (nameA.includes('tonga')) return -1;
+    if (nameB.includes('tonga')) return 1;
+    return 0;
+  });
 
   if (cajaCerradaHoy) {
     return (
