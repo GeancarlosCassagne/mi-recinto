@@ -62,9 +62,10 @@ export default function AdminPage() {
   const [estadoCaja, setEstadoCaja] = useState<'abierta' | 'cerrada'>('abierta');
   const [verDetalleModal, setVerDetalleModal] = useState(false);
 
-  // Estados para la edición directa de nombre de plato
+  // Estados para la edición directa de nombre y precio de plato
   const [idPlatoEditando, setIdPlatoEditando] = useState<string | null>(null);
   const [nuevoNombrePlato, setNuevoNombrePlato] = useState('');
+  const [nuevoPrecioPlato, setNuevoPrecioPlato] = useState('');
 
   const [listadoMeseras, setListadoMeseras] = useState<{ id: string; nombre: string }[]>([]);
   const [nuevaMesera, setNuevaMesera] = useState('');
@@ -167,20 +168,26 @@ export default function AdminPage() {
     } finally { setCargando(false); }
   };
 
-  const guardarNuevoNombre = async (id: string) => {
+  const guardarCambiosPlato = async (id: string) => {
     if (!nuevoNombrePlato.trim()) return alert('El nombre no puede estar vacío.');
+    const precioNum = parseFloat(nuevoPrecioPlato);
+    if (isNaN(precioNum) || precioNum <= 0) return alert('Ingresa un precio válido.');
 
     const { error } = await supabase
       .from('platos')
-      .update({ nombre: nuevoNombrePlato.trim() })
+      .update({ 
+        nombre: nuevoNombrePlato.trim(),
+        precio: precioNum 
+      })
       .eq('id', id);
 
     if (!error) {
       setIdPlatoEditando(null);
       setNuevoNombrePlato('');
+      setNuevoPrecioPlato('');
       obtenerPlatos();
     } else {
-      alert('Error al actualizar el nombre del plato.');
+      alert('Error al actualizar el plato.');
     }
   };
 
@@ -472,7 +479,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* PLANIFICADOR MENÚ DIARIO REDISEÑADO (SIN ESPACIO EN BLANCO Y CON EDICIÓN DE NOMBRE) */}
+      {/* PLANIFICADOR MENÚ DIARIO CON EDICIÓN DE NOMBRE Y PRECIO */}
       <div className="md:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 flex flex-col h-fit shadow-sm">
         <div className="flex justify-between border-b border-gray-100 pb-4 mb-4 items-center">
           <h2 className="text-lg font-bold text-gray-950">Planificador del Menú del Día</h2>
@@ -511,12 +518,23 @@ export default function AdminPage() {
                           type="text" 
                           value={nuevoNombrePlato} 
                           onChange={(e) => setNuevoNombrePlato(e.target.value)} 
+                          placeholder="Nombre..."
                           className="text-xs font-bold border border-emerald-600 rounded-lg px-2 py-1 bg-white outline-none text-gray-900 w-full shadow-inner"
                           autoFocus
                         />
+                        <div className="relative shrink-0 w-20">
+                          <span className="absolute left-2 top-1 text-xs text-gray-400 font-bold">$</span>
+                          <input 
+                            type="text" 
+                            value={nuevoPrecioPlato} 
+                            onChange={(e) => setNuevoPrecioPlato(e.target.value)} 
+                            placeholder="0.00"
+                            className="text-xs font-bold border border-emerald-600 rounded-lg pl-5 pr-1 py-1 bg-white outline-none text-gray-900 w-full shadow-inner"
+                          />
+                        </div>
                         <button 
                           type="button" 
-                          onClick={() => guardarNuevoNombre(plato.id)} 
+                          onClick={() => guardarCambiosPlato(plato.id)} 
                           className="bg-emerald-700 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-lg hover:bg-emerald-800 shrink-0"
                         >
                           💾
@@ -530,7 +548,12 @@ export default function AdminPage() {
                         </button>
                       </div>
                     ) : (
-                      <h4 className="font-bold text-sm capitalize text-gray-950 truncate">{plato.nombre}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-sm capitalize text-gray-950 truncate">{plato.nombre}</h4>
+                        <span className="text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
+                          ${Number(plato.precio).toFixed(2)}
+                        </span>
+                      </div>
                     )}
 
                     <div className="mt-1 flex items-center space-x-1">
@@ -555,9 +578,10 @@ export default function AdminPage() {
                     onClick={() => {
                       setIdPlatoEditando(plato.id);
                       setNuevoNombrePlato(plato.nombre);
+                      setNuevoPrecioPlato(Number(plato.precio).toFixed(2));
                     }}
                     className="p-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all"
-                    title="Editar Nombre del Plato"
+                    title="Editar Nombre y Precio del Plato"
                   >
                     ✏️
                   </button>
@@ -576,7 +600,7 @@ export default function AdminPage() {
                   <button 
                     type="button"
                     onClick={() => eliminarPlato(plato.id, plato.nombre, plato.categoria)}
-                    className={`p-2 rounded-xl border transition-all flex items-center justify-center ${
+                    className={`p-2 rounded-xl border transition-all ${
                       esFijo 
                         ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' 
                         : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
