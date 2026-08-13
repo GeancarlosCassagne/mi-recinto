@@ -890,7 +890,10 @@ export default function ClientMenu() {
                     <p className="text-xs text-gray-400 italic col-span-4 text-center py-3">No hay presas registradas para esta preparación.</p>
                   ) : (
                     opcionesPresasSegunGallina().map((p) => {
-                      const nombreLimpioPresa = p.nombre.replace(' Criolla', '').replace(' Granja', '').replace(' Caldo', '');
+                      const nombreLimpioPresa = p.nombre
+                        .replace(' Criolla', '')
+                        .replace(' Granja', '')
+                        .replace(' Caldo', '');
                       return (
                         <button 
                           key={p.id} 
