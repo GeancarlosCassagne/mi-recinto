@@ -39,11 +39,12 @@ export default function CocinaPage() {
   const [pedidoAConfirmar, setPedidoAConfirmar] = useState<Pedido | null>(null);
 
   const obtenerPedidosDelDia = async () => {
-    // Calculamos el día local real (Ecuador UTC-5)
+    // 1. Calculamos la fecha local exacta de Ecuador (UTC-5)
     const d = new Date();
     const offset = d.getTimezoneOffset() * 60000;
     const hoyLocal = new Date(d.getTime() - offset).toISOString().split('T')[0];
     
+    // 2. Traemos únicamente los pedidos creados en el rango del día de hoy
     const { data } = await supabase
       .from('pedidos')
       .select('id, mesa, estado, created_at, detalles_pedido (cantidad, platos (nombre))')
