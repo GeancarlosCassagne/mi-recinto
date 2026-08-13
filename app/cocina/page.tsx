@@ -39,14 +39,17 @@ export default function CocinaPage() {
   const [pedidoAConfirmar, setPedidoAConfirmar] = useState<Pedido | null>(null);
 
   const obtenerPedidosDelDia = async () => {
-    const hoy = new Date().toISOString().split('T')[0];
+    // Calculamos el día local real (Ecuador UTC-5)
+    const d = new Date();
+    const offset = d.getTimezoneOffset() * 60000;
+    const hoyLocal = new Date(d.getTime() - offset).toISOString().split('T')[0];
     
     const { data } = await supabase
       .from('pedidos')
       .select('id, mesa, estado, created_at, detalles_pedido (cantidad, platos (nombre))')
       .in('estado', ['pendiente', 'entregado'])
-      .gte('created_at', `${hoy} 00:00:00`)
-      .lte('created_at', `${hoy} 23:59:59`)
+      .gte('created_at', `${hoyLocal} 00:00:00`)
+      .lte('created_at', `${hoyLocal} 23:59:59`)
       .order('created_at', { ascending: true });
 
     if (data) setPedidos(data as unknown as Pedido[]);
