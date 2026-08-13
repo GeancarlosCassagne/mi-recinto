@@ -495,6 +495,7 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+          </div>
 
         {/* MÓDULO GESTIÓN DE MESERAS */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
