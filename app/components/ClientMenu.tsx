@@ -891,9 +891,10 @@ export default function ClientMenu() {
                   ) : (
                     opcionesPresasSegunGallina().map((p) => {
                       const nombreLimpioPresa = p.nombre
-                        .replace(' Criolla', '')
-                        .replace(' Granja', '')
-                        .replace(' Caldo', '');
+  .replace(' Criolla', '')
+  .replace(' Granja', '')
+  .replace(' Caldo', '')
+  .replace(' (Palizada)', ''); // Quitamos la palabra entre paréntesis si existiera
                       return (
                         <button 
                           key={p.id} 
