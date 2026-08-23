@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Utensils, ShoppingCart, Plus, Minus, CheckCircle, PlusCircle, Trash2, ChevronRight, User, AlertTriangle, Sparkles, Bike, UtensilsCrossed, GlassWater, Milk, Flame, Coffee, Cookie, Edit3 } from 'lucide-react';
+import { Utensils, ShoppingCart, Plus, Minus, CheckCircle, PlusCircle, Trash2, ChevronRight, User, AlertTriangle, Sparkles, Bike, UtensilsCrossed, GlassWater, Milk, Flame, Coffee, Cookie, Edit3, MessageSquare, Tag } from 'lucide-react';
 
 interface Plato {
   id: string;
@@ -22,6 +22,7 @@ interface CarritoItem {
 
 interface Adicional {
   id: string;
+  tipo: 'comentario' | 'adicional';
   descripcion: string;
   precio: number;
 }
@@ -43,8 +44,9 @@ export default function ClientMenu() {
   const [cajaCerradaHoy, setCajaCerradaHoy] = useState(false);
   const [adicionales, setAdicionales] = useState<Adicional[]>([]);
   const [mostrarFormAdicional, setMostrarFormAdicional] = useState(false);
+  const [tipoNota, setTipoNota] = useState<'comentario' | 'adicional'>('comentario');
   const [descAdicional, setDescAdicional] = useState('');
-  const [precioAdicional, setPrecioAdicional] = useState('');
+  const [precioAdicional, setPrecioAdicional] = useState('0.50');
 
   const [notificacion, setNotificacion] = useState<{ visible: boolean; mensaje: string }>({ visible: false, mensaje: '' });
 
@@ -57,7 +59,7 @@ export default function ClientMenu() {
   // MODAL ALMUERZO
   const [configurandoAlmuerzo, setConfigurandoAlmuerzo] = useState(false);
   const [almuerzoSeleccionado, setAlmuerzoSeleccionado] = useState<Plato | null>(null);
-  const [pasoAlmuerzo, setPasoAlmuerzo] = useState<'tipo' | 'segundo' | 'presa_segundo' | 'caldo' | 'bebida'>('tipo');
+  const [pasoAlmuerzo, setPasoAlmuerzo] = useState<'tipo' | 'caldo' | 'segundo' | 'presa_segundo' | 'bebida'>('tipo');
   const [tipoAlmuerzo, setTipoAlmuerzo] = useState<'completo' | 'segundo' | 'caldo'>('completo');
   const [sopaElegida, setSopaElegida] = useState<string>('');
   const [almuerzoPrecio, setAlmuerzoPrecio] = useState<number>(3.00);
@@ -362,6 +364,7 @@ export default function ClientMenu() {
     setTongaSeleccionada(null);
   };
 
+  // 🟢 1. SELECCIONAR TIPO DE ALMUERZO -> PRIMERO A CALDO (O SEGUNDO SI ES SOLO SEGUNDO)
   const seleccionarTipoAlmuerzo = (tipo: 'completo' | 'segundo' | 'caldo') => {
     let basePrecio = 3.00;
     if (tipo === 'segundo') basePrecio = 2.50;
@@ -372,13 +375,25 @@ export default function ClientMenu() {
     setTipoAlmuerzo(tipo);
     setAlmuerzoPrecio(precioFinal);
 
-    if (tipo === 'caldo') {
-      setPasoAlmuerzo('caldo');
-    } else {
+    if (tipo === 'segundo') {
       setPasoAlmuerzo('segundo');
+    } else {
+      // Completo o Solo Caldo empieza siempre en Caldo
+      setPasoAlmuerzo('caldo');
     }
   };
 
+  // 🟢 2. SELECCIONAR CALDO -> LUEGO A SEGUNDO (SI ES COMPLETO) O A BEBIDA (SI ES SOLO CALDO)
+  const seleccionarCaldoAlmuerzo = (nombreCaldo: string) => {
+    setSopaElegida(nombreCaldo);
+    if (tipoAlmuerzo === 'completo') {
+      setPasoAlmuerzo('segundo');
+    } else {
+      setPasoAlmuerzo('bebida');
+    }
+  };
+
+  // 🟢 3. SELECCIONAR SEGUNDO -> LUEGO A BEBIDA (O PRESA SI ES HORNADO)
   const seleccionarSegundoAlmuerzo = (nombreSegundo: string) => {
     const esHornado = nombreSegundo.toLowerCase().includes('hornado') || nombreSegundo.toLowerCase().includes('horneado');
     
@@ -387,23 +402,16 @@ export default function ClientMenu() {
       setPasoAlmuerzo('presa_segundo');
     } else {
       setSegundoElegido(nombreSegundo);
-      if (tipoAlmuerzo === 'completo') {
-        setPasoAlmuerzo('caldo');
-      } else {
-        setPasoAlmuerzo('bebida');
-      }
+      setPasoAlmuerzo('bebida');
     }
   };
 
   const confirmarPresaSegundoAlmuerzo = (presa: string) => {
     setSegundoElegido(`Pollo Hornado (${presa})`);
-    if (tipoAlmuerzo === 'completo') {
-      setPasoAlmuerzo('caldo');
-    } else {
-      setPasoAlmuerzo('bebida');
-    }
+    setPasoAlmuerzo('bebida');
   };
 
+  // 🟢 4. FINALIZAR CON LA BEBIDA
   const finalizarAlmuerzo = (bebidaFinal: string) => {
     if (!almuerzoSeleccionado) return;
 
@@ -417,7 +425,7 @@ export default function ClientMenu() {
     } else if (tipoAlmuerzo === 'segundo') {
       detalles = `Solo Segundo: ${segundoElegido} + ${bebidaFinal}${tagLlevar}`;
     } else if (tipoAlmuerzo === 'caldo') {
-      detalles = `Solo Caldo: ${bebidaFinal}${tagLlevar}`;
+      detalles = `Solo Caldo: ${sopaElegida} + ${bebidaFinal}${tagLlevar}`;
     }
 
     const idUnico = `${almuerzoSeleccionado.id}-${detalles.replace(/\s+/g, '-')}`;
@@ -505,13 +513,28 @@ export default function ClientMenu() {
 
   const agregarAdicionalALaLista = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!descAdicional.trim() || !precioAdicional.trim()) return;
-    const precioNum = parseFloat(precioAdicional);
-    if (isNaN(precioNum) || precioNum < 0) return alert('Ingresa un precio válido.');
+    if (!descAdicional.trim()) return;
 
-    setAdicionales([...adicionales, { id: crypto.randomUUID(), descripcion: descAdicional.trim(), precio: precioNum }]);
+    if (tipoNota === 'comentario') {
+      setAdicionales([...adicionales, { 
+        id: crypto.randomUUID(), 
+        tipo: 'comentario',
+        descripcion: descAdicional.trim(), 
+        precio: 0 
+      }]);
+    } else {
+      const precioNum = parseFloat(precioAdicional);
+      if (isNaN(precioNum) || precioNum < 0) return alert('Ingresa un precio válido.');
+      setAdicionales([...adicionales, { 
+        id: crypto.randomUUID(), 
+        tipo: 'adicional',
+        descripcion: descAdicional.trim(), 
+        precio: precioNum 
+      }]);
+    }
+
     setDescAdicional('');
-    setPrecioAdicional('');
+    setPrecioAdicional('0.50');
     setMostrarFormAdicional(false);
   };
 
@@ -538,7 +561,13 @@ export default function ClientMenu() {
     let mesaConAdicionales = `${prefijoTipo}${mesa.trim()} [MESERA: ${mesera}]`;
     
     if (adicionales.length > 0) {
-      const textoAdicionales = adicionales.map(a => `${a.descripcion} ($${a.precio.toFixed(2)})`).join(', ');
+      const textoAdicionales = adicionales.map(a => {
+        if (a.tipo === 'comentario') {
+          return `Nota: ${a.descripcion}`;
+        }
+        return `${a.descripcion} ($${a.precio.toFixed(2)})`;
+      }).join(', ');
+      
       mesaConAdicionales = `${mesaConAdicionales} [EXTRA: ${textoAdicionales}]`;
     }
 
@@ -558,7 +587,10 @@ export default function ClientMenu() {
         let mesaUpdate = `${prefijoTipo}${mesa.trim()} [MESERA: ${mesera}]`;
         
         if (adicionales.length > 0) {
-          const textoAdicionales = adicionales.map(a => `${a.descripcion} ($${a.precio.toFixed(2)})`).join(', ');
+          const textoAdicionales = adicionales.map(a => {
+            if (a.tipo === 'comentario') return `Nota: ${a.descripcion}`;
+            return `${a.descripcion} ($${a.precio.toFixed(2)})`;
+          }).join(', ');
           mesaUpdate = `${mesaUpdate} [EXTRA: ${textoAdicionales}]`;
         }
 
@@ -642,6 +674,7 @@ export default function ClientMenu() {
 
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
 
+  // Solo jugos del día configurados en Admin
   const opcionesBebidas = platos.filter(p => p.categoria === 'jugo');
 
   const opcionesPresasSegunGallina = () => {
@@ -654,7 +687,6 @@ export default function ClientMenu() {
 
   const platoAlmuerzoDelDia = platos.find(p => p.nombre.toLowerCase().includes('almuerzo del día'));
   
-  // Categorización de la carta
   const platosTradicionales = platos.filter(p => {
     const n = p.nombre.toLowerCase();
     const esHornado = n.includes('hornado') || n.includes('horneado');
@@ -741,7 +773,7 @@ export default function ClientMenu() {
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 relative text-gray-900 bg-white">
 
-      {/* 1️⃣ BANNER SELECCIÓN DE MESERA (LIMPIO) */}
+      {/* 1️⃣ BANNER SELECCIÓN DE MESERA */}
       <div className="md:col-span-3 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center space-x-2.5">
           <User className="h-5 w-5 text-emerald-800" />
@@ -770,7 +802,7 @@ export default function ClientMenu() {
       {/* SECCIÓN DEL MENÚ */}
       <div className="md:col-span-2 space-y-6">
         
-        {/* 2️⃣ SELECTOR DE MODALIDAD (SERVIRSE / LLEVAR) */}
+        {/* 2️⃣ SELECTOR DE MODALIDAD */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-5">
           <div className="flex items-center space-x-3">
             <Utensils className="h-7 w-7 text-emerald-700" />
@@ -810,7 +842,7 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* MODAL CONFIGURADOR ALMUERZO DIARIO */}
+        {/* 🟢 MODAL CONFIGURADOR ALMUERZO DIARIO: ORDEN (CALDO -> SEGUNDO -> JUGO) */}
         {configurandoAlmuerzo && (
           <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4 transition-all duration-200">
             <div className="flex justify-between items-center border-b border-emerald-100 pb-3">
@@ -818,6 +850,7 @@ export default function ClientMenu() {
               <button onClick={() => setConfigurandoAlmuerzo(false)} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
             </div>
 
+            {/* PASO 1: SELECCIONAR TIPO DE ALMUERZO */}
             {pasoAlmuerzo === 'tipo' && (
               <div>
                 <p className="text-xs font-bold text-gray-500 uppercase mb-3">1. Selecciona el tipo de servicio:</p>
@@ -829,9 +862,51 @@ export default function ClientMenu() {
               </div>
             )}
 
+            {/* PASO 2: SELECCIONAR CALDO / SOPA */}
+            {pasoAlmuerzo === 'caldo' && (
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-3">2. Selecciona la Sopa / Caldo de hoy:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {opcionesCaldos.length === 0 ? (
+                    <button 
+                      onClick={() => {
+                        seleccionarCaldoAlmuerzo('Sin sopa');
+                      }} 
+                      className="p-3 bg-white border rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white transition text-center text-xs shadow-sm"
+                    >
+                      No hay caldos hoy (Pasar directo)
+                    </button>
+                  ) : (
+                    opcionesCaldos.map((c) => (
+                      <button 
+                        key={c.id} 
+                        disabled={!c.disponible}
+                        onClick={() => seleccionarCaldoAlmuerzo(c.nombre)} 
+                        className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
+                          c.disponible 
+                            ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                        }`}
+                      >
+                        <span className="flex items-center justify-center gap-2">
+                          <span>{c.nombre}</span>
+                          {!c.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* PASO 3: SELECCIONAR SEGUNDO / PLATO FUERTE */}
             {pasoAlmuerzo === 'segundo' && (
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase mb-3">2. Selecciona el plato Fuerte / Segundo:</p>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-1">
+                  {tipoAlmuerzo === 'completo' ? '3. Selecciona el plato Fuerte / Segundo:' : '2. Selecciona el plato Fuerte / Segundo:'}
+                </p>
+                {tipoAlmuerzo === 'completo' && <p className="text-[11px] text-emerald-800 font-medium mb-3">Sopa elegida: <span className="uppercase font-bold">{sopaElegida}</span></p>}
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {opcionesSegundos.length === 0 ? (
                     <p className="text-xs text-gray-400 italic">No hay platos fuertes registrados hoy.</p>
@@ -859,9 +934,10 @@ export default function ClientMenu() {
               </div>
             )}
 
+            {/* PASO 3.1: PRESA DE POLLO HORNADO */}
             {pasoAlmuerzo === 'presa_segundo' && (
               <div>
-                <p className="text-xs font-bold text-emerald-800 uppercase mb-1">2.1 Selecciona la presa para el Pollo Hornado:</p>
+                <p className="text-xs font-bold text-emerald-800 uppercase mb-1">Selecciona la presa para el Pollo Hornado:</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {platos.filter(p => p.categoria === 'presa_granja').map((p) => {
                     const nombreLimpioPresa = p.nombre
@@ -892,56 +968,11 @@ export default function ClientMenu() {
               </div>
             )}
 
-            {pasoAlmuerzo === 'caldo' && (
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase mb-1">3. Selecciona la Sopa / Caldo de hoy:</p>
-                {tipoAlmuerzo === 'completo' && <p className="text-[11px] text-emerald-800 font-medium mb-3">Fuerte elegido: <span className="uppercase font-bold">{segundoElegido}</span></p>}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {opcionesCaldos.length === 0 ? (
-                    <button 
-                      onClick={() => {
-                        setSopaElegida('Sin sopa');
-                        if (tipoAlmuerzo === 'completo') setPasoAlmuerzo('bebida');
-                        else finalizarAlmuerzo('Sin bebida');
-                      }} 
-                      className="p-3 bg-white border rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white transition text-center text-xs shadow-sm"
-                    >
-                      No hay caldos hoy (Pasar directo)
-                    </button>
-                  ) : (
-                    opcionesCaldos.map((c) => (
-                      <button 
-                        key={c.id} 
-                        disabled={!c.disponible}
-                        onClick={() => {
-                          if (tipoAlmuerzo === 'completo') {
-                            setSopaElegida(c.nombre);
-                            setPasoAlmuerzo('bebida');
-                          } else {
-                            finalizarAlmuerzo(c.nombre);
-                          }
-                        }} 
-                        className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
-                          c.disponible 
-                            ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                        }`}
-                      >
-                        <span className="flex items-center justify-center gap-2">
-                          <span>{c.nombre}</span>
-                          {!c.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
+            {/* PASO 4: SELECCIONAR JUGO DEL DÍA */}
             {pasoAlmuerzo === 'bebida' && (
               <div>
                 <p className="text-xs font-bold text-gray-500 uppercase mb-1">
-                  {tipoAlmuerzo === 'completo' ? '4. Selecciona la Bebida / Jugo de hoy:' : '3. Selecciona la Bebida / Jugo de hoy:'}
+                  {tipoAlmuerzo === 'completo' ? '4. Selecciona el Jugo del Día:' : '3. Selecciona el Jugo del Día:'}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                   {opcionesBebidas.length === 0 ? (
@@ -1280,7 +1311,7 @@ export default function ClientMenu() {
 
       </div>
 
-      {/* CARRITO LATERAL EN ESCRITORIO (Visible en md:) */}
+      {/* CARRITO LATERAL EN ESCRITORIO */}
       <div className="hidden md:block">
         {renderPanelCarrito()}
       </div>
@@ -1319,8 +1350,14 @@ export default function ClientMenu() {
 
               {adicionales.map((adi) => (
                 <div key={adi.id} className="pt-2 flex justify-between items-center text-emerald-900 font-semibold bg-emerald-50/30 px-2 py-1 rounded-lg mt-1">
-                  <p className="capitalize truncate">[Nota Extra] {adi.descripcion}</p>
-                  <span className="font-extrabold shrink-0">${adi.precio.toFixed(2)}</span>
+                  <p className="capitalize truncate">
+                    {adi.tipo === 'comentario' ? `[Observación] ${adi.descripcion}` : `[Adicional] ${adi.descripcion}`}
+                  </p>
+                  {adi.precio > 0 ? (
+                    <span className="font-extrabold shrink-0">${adi.precio.toFixed(2)}</span>
+                  ) : (
+                    <span className="text-[10px] text-gray-400 font-bold uppercase shrink-0">Sin costo</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -1431,7 +1468,6 @@ export default function ClientMenu() {
     </div>
   );
 
-  // Renderizador unificado para el panel de pedido
   function renderPanelCarrito() {
     return (
       <div className="border border-gray-200 rounded-2xl p-5 bg-gray-50 h-fit space-y-4 shadow-sm">
@@ -1485,40 +1521,99 @@ export default function ClientMenu() {
             </div>
           ))}
 
-          {/* LISTA DE EXTRAS */}
+          {/* LISTA DE EXTRAS Y COMENTARIOS */}
           {adicionales.map((adi) => (
-            <div key={adi.id} className="py-2.5 flex justify-between items-center bg-emerald-50/40 px-2 rounded-xl mt-1.5">
-              <div>
-                <h4 className="font-bold text-emerald-900 text-xs capitalize">[Extra] {adi.descripcion}</h4>
-                <p className="text-xs text-emerald-700 mt-0.5 font-mono">${adi.precio.toFixed(2)}</p>
+            <div key={adi.id} className={`py-2.5 flex justify-between items-center px-2.5 rounded-xl mt-1.5 border ${
+              adi.tipo === 'comentario' 
+                ? 'bg-blue-50/60 border-blue-200 text-blue-950' 
+                : 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+            }`}>
+              <div className="pr-2">
+                <h4 className="font-bold text-xs capitalize flex items-center gap-1">
+                  {adi.tipo === 'comentario' ? <MessageSquare className="h-3 w-3 text-blue-600" /> : <Tag className="h-3 w-3 text-emerald-600" />}
+                  <span>{adi.tipo === 'comentario' ? '[Nota]' : '[Adicional]'} {adi.descripcion}</span>
+                </h4>
+                {adi.precio > 0 ? (
+                  <p className="text-[11px] text-emerald-700 font-mono font-bold mt-0.5">${adi.precio.toFixed(2)}</p>
+                ) : (
+                  <p className="text-[10px] text-blue-600 font-medium mt-0.5">Observación sin costo</p>
+                )}
               </div>
               <button onClick={() => setAdicionales(adicionales.filter((a) => a.id !== adi.id))} className="p-1 text-gray-400 hover:text-red-600 transition"><Trash2 className="h-3.5 w-3.5" /></button>
             </div>
           ))}
         </div>
 
-        {/* BOTÓN ADICIONALES */}
+        {/* SELECTOR DINÁMICO DE COMENTARIO VS ADICIONAL */}
         {!mostrarFormAdicional ? (
-          <button type="button" onClick={() => setMostrarFormAdicional(true)} className="w-full border border-dashed border-emerald-300 text-emerald-800 bg-white py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1 hover:bg-emerald-50/30 transition shadow-sm">
+          <button 
+            type="button" 
+            onClick={() => setMostrarFormAdicional(true)} 
+            className="w-full border border-dashed border-emerald-300 text-emerald-800 bg-white py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1 hover:bg-emerald-50/30 transition shadow-sm"
+          >
             <PlusCircle className="h-3.5 w-3.5 text-emerald-700" />
             <span>Agregar Nota o Adicional</span>
           </button>
         ) : (
-          <form onSubmit={agregarAdicionalALaLista} className="bg-white p-3 border border-gray-200 rounded-xl space-y-2 shadow-sm">
-            <input type="text" placeholder="Ej. Porción de Maní o Huevo Extra" value={descAdicional} onChange={(e) => setDescAdicional(e.target.value)} className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white" required />
-            <select
-              value={precioAdicional}
-              onChange={(e) => setPrecioAdicional(e.target.value)}
-              className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white font-bold text-gray-700"
-              required
-            >
-              <option value="">Seleccionar Precio Adicional...</option>
-              <option value="0.50">{"$0.50 Centavos"}</option>
-              <option value="1.00">{"$1.00 Dólar"}</option>
-            </select>
+          <form onSubmit={agregarAdicionalALaLista} className="bg-white p-3.5 border border-gray-200 rounded-xl space-y-2.5 shadow-sm">
+            <div className="flex bg-gray-100 p-1 rounded-lg gap-1">
+              <button
+                type="button"
+                onClick={() => setTipoNota('comentario')}
+                className={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition flex items-center justify-center gap-1 ${
+                  tipoNota === 'comentario' 
+                    ? 'bg-white text-blue-900 shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                <MessageSquare className="h-3 w-3" />
+                <span>Comentario ($0.00)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTipoNota('adicional')}
+                className={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition flex items-center justify-center gap-1 ${
+                  tipoNota === 'adicional' 
+                    ? 'bg-emerald-700 text-white shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                <Tag className="h-3 w-3" />
+                <span>Adicional ($)</span>
+              </button>
+            </div>
+
+            <input 
+              type="text" 
+              placeholder={tipoNota === 'comentario' ? 'Ej. Sin cebolla, bien tostado...' : 'Ej. Porción de Arroz, Huevo frito...'} 
+              value={descAdicional} 
+              onChange={(e) => setDescAdicional(e.target.value)} 
+              className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white" 
+              required 
+              autoFocus
+            />
+
+            {tipoNota === 'adicional' && (
+              <select
+                value={precioAdicional}
+                onChange={(e) => setPrecioAdicional(e.target.value)}
+                className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white font-bold text-gray-700"
+                required
+              >
+                <option value="0.25">{"$0.25 Centavos"}</option>
+                <option value="0.50">{"$0.50 Centavos"}</option>
+                <option value="0.75">{"$0.75 Centavos"}</option>
+                <option value="1.00">{"$1.00 Dólar"}</option>
+                <option value="1.50">{"$1.50 Dólares"}</option>
+                <option value="2.00">{"$2.00 Dólares"}</option>
+              </select>
+            )}
+
             <div className="flex gap-2 justify-end text-[11px] font-bold pt-1">
-              <button type="button" onClick={() => setMostrarFormAdicional(false)} className="text-gray-400 hover:text-gray-600">Cancelar</button>
-              <button type="submit" className="px-3 py-1 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition">Añadir</button>
+              <button type="button" onClick={() => setMostrarFormAdicional(false)} className="text-gray-400 hover:text-gray-600 px-2 py-1">Cancelar</button>
+              <button type="submit" className="px-3.5 py-1.5 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition">
+                {tipoNota === 'comentario' ? 'Guardar Nota' : 'Añadir Adicional'}
+              </button>
             </div>
           </form>
         )}
@@ -1533,7 +1628,7 @@ export default function ClientMenu() {
           {enviando ? 'Procesando...' : idPedidoAEditar ? '💾 Guardar Cambios' : 'Confirmar Pedido'}
         </button>
 
-        {/* 🟢 BOTÓN EDITAR ORDEN (UBICADO DEBAJO DE CONFIRMAR PEDIDO) */}
+        {/* BOTÓN EDITAR ORDEN */}
         <button 
           type="button"
           onClick={abrirModalEditarOrden}
