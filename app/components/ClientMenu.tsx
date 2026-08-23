@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Utensils, ShoppingCart, Plus, Minus, CheckCircle, PlusCircle, Trash2, ChevronRight, Lock, User, AlertTriangle, Sparkles, Bike, UtensilsCrossed } from 'lucide-react';
+import { Utensils, ShoppingCart, Plus, Minus, CheckCircle, PlusCircle, Trash2, ChevronRight, User, AlertTriangle, Sparkles, Bike, UtensilsCrossed, GlassWater, Milk, Flame, Coffee, Cookie } from 'lucide-react';
 
 interface Plato {
   id: string;
@@ -33,22 +33,6 @@ const obtenerFechaLocal = () => {
 };
 
 export default function ClientMenu() {
-  const [autenticado, setAutenticado] = useState(true);
-  const [passInput, setPassInput] = useState('');
-  const [errorPass, setErrorPass] = useState(false);
-  const CLAVE_ACCESO = '1234';
-
-  const validarAcceso = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passInput === CLAVE_ACCESO) {
-      setAutenticado(true);
-      setErrorPass(false);
-    } else {
-      setErrorPass(true);
-      setPassInput('');
-    }
-  };
-
   const [platos, setPlatos] = useState<Plato[]>([]);
   const [mesa, setMesa] = useState<string>(''); 
   const [mesera, setMesera] = useState<string>('');
@@ -64,11 +48,13 @@ export default function ClientMenu() {
 
   const [notificacion, setNotificacion] = useState<{ visible: boolean; mensaje: string }>({ visible: false, mensaje: '' });
 
+  // MODAL TONGA Y SECOS
   const [configurandoTonga, setConfigurandoTonga] = useState(false);
   const [pasoTonga, setPasoTonga] = useState<'tipo' | 'presa'>('tipo');
   const [tongaSeleccionada, setTongaSeleccionada] = useState<Plato | null>(null);
   const [tipoGallina, setTipoGallina] = useState<string>('');
 
+  // MODAL ALMUERZO
   const [configurandoAlmuerzo, setConfigurandoAlmuerzo] = useState(false);
   const [almuerzoSeleccionado, setAlmuerzoSeleccionado] = useState<Plato | null>(null);
   const [pasoAlmuerzo, setPasoAlmuerzo] = useState<'tipo' | 'segundo' | 'presa_segundo' | 'caldo' | 'bebida'>('tipo');
@@ -76,6 +62,17 @@ export default function ClientMenu() {
   const [sopaElegida, setSopaElegida] = useState<string>('');
   const [almuerzoPrecio, setAlmuerzoPrecio] = useState<number>(3.00);
   const [segundoElegido, setSegundoElegido] = useState<string>('');
+
+  // MODAL COLA
+  const [configurandoCola, setConfigurandoCola] = useState(false);
+  const [colaSeleccionada, setColaSeleccionada] = useState<Plato | null>(null);
+  const [pasoCola, setPasoCola] = useState<'tamano' | 'envase' | 'sabor'>('tamano');
+  const [colaTamano, setColaTamano] = useState<'Personal' | 'Litro'>('Personal');
+  const [colaEnvase, setColaEnvase] = useState<'Vidrio' | 'Plástico'>('Vidrio');
+
+  // MODAL JUGO
+  const [configurandoJugo, setConfigurandoJugo] = useState(false);
+  const [jugoSeleccionado, setJugoSeleccionado] = useState<Plato | null>(null);
 
   const [mostrarConfirmarModal, setMostrarConfirmarModal] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -97,7 +94,6 @@ export default function ClientMenu() {
   const inicializarMenu = async () => {
     const hoy = obtenerFechaLocal();
     
-    // 1. Verificar estado de caja
     const { data: caja } = await supabase
       .from('cajas')
       .select('estado')
@@ -111,13 +107,11 @@ export default function ClientMenu() {
       setCajaCerradaHoy(false);
     }
 
-    // 2. Traer todos los platos del banco general
     const { data: todosLosPlatos } = await supabase
       .from('platos')
       .select('id, nombre, precio, disponible, categoria')
       .order('nombre', { ascending: true });
 
-    // 3. Buscar los platos establecidos en el menú diario
     let { data: datosMenuDiario } = await supabase
       .from('menu_diario')
       .select('plato_id, fecha')
@@ -142,17 +136,19 @@ export default function ClientMenu() {
       const platosFiltrados = todosLosPlatos.filter((plato) => {
         const nombreLimpio = plato.nombre.toLowerCase();
         
-        // Elementos fijos y estructurales que siempre existen
         const esComponenteEstructural = 
           plato.categoria === 'presa_criolla' ||
           plato.categoria === 'presa_granja' ||
           plato.categoria === 'presa_caldo' ||
           plato.categoria === 'fijo' ||
           plato.categoria === 'bebida' ||
+          plato.categoria === 'jugo' ||
           nombreLimpio.includes('almuerzo del día') ||
           nombreLimpio.includes('tonga') ||
           nombreLimpio.includes('hornado') ||
           nombreLimpio.includes('horneado') ||
+          nombreLimpio.includes('cola') ||
+          nombreLimpio.includes('jugo') ||
           nombreLimpio.includes('seco criollo');
 
         return esComponenteEstructural || idsAsignados.includes(plato.id);
@@ -257,28 +253,28 @@ export default function ClientMenu() {
 
     const nombreLimpio = plato.nombre.toLowerCase();
     
-    // 1. Tonga: Pregunta tipo (Criolla o Granja)
+    // 1. Tonga
     if (nombreLimpio.includes('tonga')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('tipo');
       setTipoGallina('');
     } 
-    // 2. Seco Criollo: Directo a presas Criollas
+    // 2. Seco Criollo
     else if (nombreLimpio.includes('seco criollo')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Criolla');
     } 
-    // 3. Pollo Hornado / Horneado Fijo: Directo a presas de Granja
+    // 3. Pollo Hornado
     else if (nombreLimpio.includes('hornado') || nombreLimpio.includes('horneado')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Granja');
     } 
-    // 4. Caldo Criollo: Directo a presas exclusivas de Caldo
+    // 4. Caldo Criollo
     else if (nombreLimpio.includes('caldo criollo')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
@@ -293,7 +289,22 @@ export default function ClientMenu() {
       setSegundoElegido('');
       setSopaElegida('');
     } 
-    // 6. Platos sueltos / Bebidas
+    // 6. Colas (Configurador interactivo si se llama solo "Cola")
+    else if (nombreLimpio === 'cola' || nombreLimpio.startsWith('cola ')) {
+      if (nombreLimpio === 'cola') {
+        setColaSeleccionada(plato);
+        setConfigurandoCola(true);
+        setPasoCola('tamano');
+      } else {
+        agregarAlCarritoNormal(plato);
+      }
+    }
+    // 7. Jugos (Configurador interactivo si es el botón genérico "Jugo")
+    else if (nombreLimpio === 'jugo' || nombreLimpio === 'jugos') {
+      setJugoSeleccionado(plato);
+      setConfigurandoJugo(true);
+    }
+    // 8. Platos sueltos
     else {
       agregarAlCarritoNormal(plato);
     }
@@ -371,12 +382,10 @@ export default function ClientMenu() {
     }
   };
 
-  // 🟢 Manejador de selección de segundo en almuerzos
   const seleccionarSegundoAlmuerzo = (nombreSegundo: string) => {
     const esHornado = nombreSegundo.toLowerCase().includes('hornado') || nombreSegundo.toLowerCase().includes('horneado');
     
     if (esHornado) {
-      // Abre el selector de presas de granja
       setSegundoElegido(nombreSegundo);
       setPasoAlmuerzo('presa_segundo');
     } else {
@@ -389,7 +398,6 @@ export default function ClientMenu() {
     }
   };
 
-  // 🟢 Confirma la presa elegida para el Pollo Hornado dentro del almuerzo
   const confirmarPresaSegundoAlmuerzo = (presa: string) => {
     setSegundoElegido(`Pollo Hornado (${presa})`);
     if (tipoAlmuerzo === 'completo') {
@@ -428,6 +436,60 @@ export default function ClientMenu() {
 
     setConfigurandoAlmuerzo(false);
     setAlmuerzoSeleccionado(null);
+  };
+
+  const finalizarConfiguracionCola = (sabor: string) => {
+    if (!colaSeleccionada) return;
+    mostrarCheckCentral('Cola Añadida');
+
+    let precioCalculado = 0.50;
+    if (colaTamano === 'Personal' && colaEnvase === 'Plástico') precioCalculado = 0.60;
+    if (colaTamano === 'Litro') precioCalculado = colaEnvase === 'Vidrio' ? 1.25 : 1.50;
+
+    const detalles = `(${colaTamano} - ${colaEnvase} - ${sabor})`;
+    const idUnico = `${colaSeleccionada.id}-${detalles.replace(/\s+/g, '-')}`;
+
+    const platoCola = {
+      ...colaSeleccionada,
+      nombre: `Cola ${sabor}`,
+      precio: precioCalculado
+    };
+
+    setCarrito((prev) => {
+      const existe = prev.find((item) => item.idUnico === idUnico);
+      if (existe) {
+        return prev.map((item) => item.idUnico === idUnico ? { ...item, grid: item.grid + 1 } : item);
+      }
+      return [...prev, { idUnico, plato: platoCola, grid: 1, detallesPersonalizados: detalles }];
+    });
+
+    setConfigurandoCola(false);
+    setColaSeleccionada(null);
+  };
+
+  const finalizarConfiguracionJugo = (saborJugo: string) => {
+    if (!jugoSeleccionado) return;
+    mostrarCheckCentral('Jugo Añadido');
+
+    const detalles = `(${saborJugo})`;
+    const idUnico = `${jugoSeleccionado.id}-${detalles.replace(/\s+/g, '-')}`;
+
+    const platoJugo = {
+      ...jugoSeleccionado,
+      nombre: `Jugo (${saborJugo})`,
+      precio: Number(jugoSeleccionado.precio) || 0.50
+    };
+
+    setCarrito((prev) => {
+      const existe = prev.find((item) => item.idUnico === idUnico);
+      if (existe) {
+        return prev.map((item) => item.idUnico === idUnico ? { ...item, grid: item.grid + 1 } : item);
+      }
+      return [...prev, { idUnico, plato: platoJugo, grid: 1, detallesPersonalizados: detalles }];
+    });
+
+    setConfigurandoJugo(false);
+    setJugoSeleccionado(null);
   };
 
   const modificarCantidad = (idUnico: string, accion: 'incrementar' | 'decrementar') => {
@@ -576,7 +638,6 @@ export default function ClientMenu() {
     }
   };
 
-  // 🟢 Asegura que Pollo Hornado siempre esté en las opciones de segundo además de los del menú diario
   const opcionesSegundos = [
     ...platos.filter(p => p.categoria === 'segundo'),
     ...platos.filter(p => (p.nombre.toLowerCase().includes('hornado') || p.nombre.toLowerCase().includes('horneado')) && p.categoria !== 'segundo')
@@ -620,50 +681,72 @@ export default function ClientMenu() {
 
   const platoAlmuerzoDelDia = platos.find(p => p.nombre.toLowerCase().includes('almuerzo del día'));
   
-  const restoDePlatosCatalogo = platos
-    .filter(p => {
-      const n = p.nombre.toLowerCase();
-      return p.categoria !== 'segundo' && 
-             p.categoria !== 'caldo' && 
-             p.categoria !== 'presa_criolla' && 
-             p.categoria !== 'presa_granja' && 
-             p.categoria !== 'presa_caldo' && 
-             !n.includes('almuerzo del día');
-    })
-    .sort((a, b) => {
-      const nameA = a.nombre.toLowerCase();
-      const nameB = b.nombre.toLowerCase();
+  // 🟢 CLASIFICACIÓN MODULAR DE LA CARTA PARA MESERAS
+  const platosTradicionales = platos.filter(p => {
+    const n = p.nombre.toLowerCase();
+    return (n.includes('tonga') || n.includes('seco criollo') || n.includes('hornado') || n.includes('caldo criollo')) &&
+           p.categoria !== 'presa_criolla' && p.categoria !== 'presa_granja' && p.categoria !== 'presa_caldo';
+  });
 
-      // Función para asignar prioridad en la parte superior
-      const obtenerPrioridad = (nombre: string) => {
-        if (nombre.includes('tonga')) return 1;
-        if (nombre.includes('seco criollo')) return 2;
-        if (nombre.includes('hornado') || nombre.includes('horneado')) return 3;
-        if (nombre.includes('caldo criollo')) return 4;
-        return 5; // El resto de platos y bebidas comerciales van al final
-      };
+  const jugosNaturales = platos.filter(p => {
+    const n = p.nombre.toLowerCase();
+    const esBebidaComercial = n.includes('cola') || n.includes('agua') || n.includes('botella');
+    return (p.categoria === 'jugo' || n.includes('jugo') || n.includes('chicha') || n.includes('quaker') || n.includes('mora') || n.includes('limon')) && !esBebidaComercial;
+  });
 
-      const prioridadA = obtenerPrioridad(nameA);
-      const prioridadB = obtenerPrioridad(nameB);
+  const bebidasComerciales = platos.filter(p => {
+    const n = p.nombre.toLowerCase();
+    return p.categoria === 'bebida' || n.includes('cola') || n.includes('agua') || n.includes('botella') || n.includes('litro');
+  });
 
-      if (prioridadA !== prioridadB) {
-        return prioridadA - prioridadB;
-      }
-
-      return nameA.localeCompare(nameB);
-    });
+  const aperitivosYExtras = platos.filter(p => {
+    const n = p.nombre.toLowerCase();
+    const esEstructural = p.categoria === 'presa_criolla' || p.categoria === 'presa_granja' || p.categoria === 'presa_caldo' || p.categoria === 'segundo' || p.categoria === 'caldo';
+    const esTradicional = n.includes('tonga') || n.includes('seco criollo') || n.includes('hornado') || n.includes('caldo criollo') || n.includes('almuerzo del día');
+    const esBebida = p.categoria === 'jugo' || p.categoria === 'bebida' || n.includes('jugo') || n.includes('chicha') || n.includes('quaker') || n.includes('cola') || n.includes('agua');
+    
+    return !esEstructural && !esTradicional && !esBebida;
+  });
 
   if (cajaCerradaHoy) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 text-center">
         <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm max-w-md">
-          <Lock className="h-12 w-12 text-slate-400 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-slate-900 mb-2">Servicio Temporalmente Cerrado</h2>
           <p className="text-slate-500 text-sm">El restaurante ha cerrado su jornada comercial por hoy.</p>
         </div>
       </div>
     );
   }
+
+  // Componente reutilizable para renderizar tarjetas de platos
+  const renderTarjetaPlato = (plato: Plato) => (
+    <div key={plato.id} className={`border rounded-2xl p-4 flex flex-col justify-between transition ${plato.disponible ? 'bg-white border-gray-200 hover:shadow-sm' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
+      <div>
+        <h3 className="text-sm font-bold capitalize text-gray-950">{plato.nombre}</h3>
+        {!plato.disponible && <span className="inline-block bg-red-100 text-red-700 text-[9px] font-bold px-1.5 py-0.5 rounded-md mt-1 uppercase">Agotado</span>}
+      </div>
+      <div className="flex justify-between items-center mt-3.5">
+        {plato.nombre.toLowerCase().includes('tonga') || plato.nombre.toLowerCase() === 'cola' ? (
+          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg">
+            Opciones a elegir
+          </span>
+        ) : (
+          <span className="text-sm font-black text-emerald-800">
+            ${Number(plato.precio).toFixed(2)}
+          </span>
+        )}
+        <button
+          onClick={() => plato.disponible && handleAgregarClick(plato)}
+          disabled={!plato.disponible}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1 ${plato.disponible ? 'bg-emerald-700 text-white hover:bg-emerald-800' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+        >
+          <Plus className="h-3 w-3 stroke-[3]" />
+          <span>Agregar</span>
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-8 relative text-gray-900 bg-white">
@@ -800,11 +883,9 @@ export default function ClientMenu() {
               </div>
             )}
 
-            {/* 🟢 SUBPASO DE SELECCIÓN DE PRESA PARA POLLO HORNADO EN ALMUERZOS */}
             {pasoAlmuerzo === 'presa_segundo' && (
               <div>
                 <p className="text-xs font-bold text-emerald-800 uppercase mb-1">2.1 Selecciona la presa para el Pollo Hornado:</p>
-                <p className="text-[11px] text-gray-500 mb-3">Presas de Granja vinculadas a la disponibilidad del día</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {platos.filter(p => p.categoria === 'presa_granja').map((p) => {
                     const nombreLimpioPresa = p.nombre
@@ -990,7 +1071,115 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* SECCIÓN DESTAQUE INDIVIDUAL PARA EL ALMUERZO DEL DÍA */}
+        {/* MODAL CONFIGURADOR DE COLAS */}
+        {configurandoCola && (
+          <div className="bg-sky-50/70 border border-sky-200 rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex justify-between items-center border-b border-sky-100 pb-3">
+              <h3 className="text-base font-bold text-sky-950 flex items-center gap-2">
+                <GlassWater className="h-5 w-5 text-sky-700" />
+                <span>Configurando Gaseosa / Cola</span>
+              </h3>
+              <button onClick={() => setConfigurandoCola(false)} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
+            </div>
+
+            {pasoCola === 'tamano' && (
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-3">1. Selecciona el tamaño de la cola:</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => { setColaTamano('Personal'); setPasoCola('envase'); }} 
+                    className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
+                  >
+                    <span className="text-gray-950 font-black">🥤 Personal</span>
+                    <span className="text-xs text-sky-700 font-bold">Vidrio ($0.50) / Plástico ($0.60)</span>
+                  </button>
+                  <button 
+                    onClick={() => { setColaTamano('Litro'); setPasoCola('envase'); }} 
+                    className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
+                  >
+                    <span className="text-gray-950 font-black">🍾 1 Litro / Familiar</span>
+                    <span className="text-xs text-sky-700 font-bold">Vidrio ($1.25) / Plástico ($1.50)</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {pasoCola === 'envase' && (
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-3">2. Selecciona el tipo de envase ({colaTamano}):</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => { setColaEnvase('Vidrio'); setPasoCola('sabor'); }} 
+                    className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
+                  >
+                    <span className="text-gray-950 font-black">🧴 Envase de Vidrio (Retornable)</span>
+                    <span className="text-xs text-sky-700 font-bold">{colaTamano === 'Personal' ? '$0.50' : '$1.25'}</span>
+                  </button>
+                  <button 
+                    onClick={() => { setColaEnvase('Plástico'); setPasoCola('sabor'); }} 
+                    className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
+                  >
+                    <span className="text-gray-950 font-black">🥤 Envase de Plástico (Desechable)</span>
+                    <span className="text-xs text-sky-700 font-bold">{colaTamano === 'Personal' ? '$0.60' : '$1.50'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {pasoCola === 'sabor' && (
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-1">3. Selecciona el Sabor / Marca:</p>
+                <p className="text-[11px] text-sky-800 font-medium mb-3">Seleccionado: <span className="font-bold">{colaTamano} ({colaEnvase})</span></p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {['Coca-Cola', 'Fioravanti', 'Sprite', 'Fanta', 'Manzana', 'Inca Kola'].map((sabor) => (
+                    <button 
+                      key={sabor}
+                      onClick={() => finalizarConfiguracionCola(sabor)}
+                      className="p-3 bg-white border rounded-xl font-bold text-xs uppercase hover:bg-sky-700 hover:text-white transition shadow-sm text-center"
+                    >
+                      {sabor}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MODAL CONFIGURADOR DE JUGOS */}
+        {configurandoJugo && (
+          <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex justify-between items-center border-b border-amber-100 pb-3">
+              <h3 className="text-base font-bold text-amber-950 flex items-center gap-2">
+                <Milk className="h-5 w-5 text-amber-700" />
+                <span>Seleccionar Tipo / Sabor de Jugo</span>
+              </h3>
+              <button onClick={() => setConfigurandoJugo(false)} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {[
+                { nombre: 'Jugo de Limón / Limonada', icono: '🍋' },
+                { nombre: 'Jugo de Mora', icono: '🫐' },
+                { nombre: 'Quaker / Avena con Naranjilla', icono: '🌾' },
+                { nombre: 'Chicha Manaba', icono: '🌽' },
+                { nombre: 'Jugo de Maracuyá', icono: '🍊' },
+                { nombre: 'Jugo de Tamarindo', icono: '🧃' }
+              ].map((j) => (
+                <button 
+                  key={j.nombre}
+                  onClick={() => finalizarConfiguracionJugo(j.nombre)}
+                  className="p-3.5 bg-white border rounded-xl font-bold text-xs uppercase hover:bg-amber-700 hover:text-white transition shadow-sm flex flex-col items-center justify-center gap-1"
+                >
+                  <span className="text-base">{j.icono}</span>
+                  <span>{j.nombre}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* SECCIÓN DESTAQUE ALMUERZO DEL DÍA */}
         {platoAlmuerzoDelDia && (
           <div className="bg-gradient-to-r from-emerald-800 to-emerald-950 text-white rounded-2xl p-6 shadow-md border border-emerald-900 flex flex-col sm:flex-row justify-between items-center gap-6 relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 text-white/5 transform rotate-12 transition-transform group-hover:scale-110 duration-300">
@@ -1023,38 +1212,69 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* RESTO DEL CATÁLOGO */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest pl-1">Carta y Adicionales</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {restoDePlatosCatalogo.map((plato) => (
-              <div key={plato.id} className={`border rounded-2xl p-5 flex flex-col justify-between transition ${plato.disponible ? 'bg-white border-gray-200 hover:shadow-sm' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
-                <div>
-                  <h3 className="text-lg font-bold capitalize text-gray-950">{plato.nombre}</h3>
-                  {!plato.disponible && <span className="inline-block bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1.5 uppercase">Agotado</span>}
-                </div>
-                <div className="flex justify-between items-center mt-5">
-                  {plato.nombre.toLowerCase().includes('tonga') ? (
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
-                      Precio según elección
-                    </span>
-                  ) : (
-                    <span className="text-base font-black text-emerald-800">
-                      ${Number(plato.precio).toFixed(2)}
-                    </span>
-                  )}
-                  <button
-                    onClick={() => plato.disponible && handleAgregarClick(plato)}
-                    disabled={!plato.disponible}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${plato.disponible ? 'bg-emerald-700 text-white hover:bg-emerald-800' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Agregar</span>
-                  </button>
-                </div>
+        {/* 🟢 SECCIONES ORGANIZADAS Y SEPARADAS DE LA CARTA */}
+        <div className="space-y-7">
+          
+          {/* 1. PLATOS TRADICIONALES Y FUERTES */}
+          {platosTradicionales.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                <Flame className="h-4 w-4 text-emerald-700" />
+                <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest">
+                  Platos Tradicionales y Fuertes
+                </h3>
               </div>
-            ))}
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {platosTradicionales.map(renderTarjetaPlato)}
+              </div>
+            </div>
+          )}
+
+          {/* 2. JUGOS Y BEBIDAS NATURALES */}
+          {jugosNaturales.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                <Milk className="h-4 w-4 text-amber-600" />
+                <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest">
+                  Jugos y Bebidas Naturales
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {jugosNaturales.map(renderTarjetaPlato)}
+              </div>
+            </div>
+          )}
+
+          {/* 3. BEBIDAS COMERCIALES */}
+          {bebidasComerciales.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                <Coffee className="h-4 w-4 text-sky-600" />
+                <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest">
+                  Bebidas Comerciales y Gaseosas
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {bebidasComerciales.map(renderTarjetaPlato)}
+              </div>
+            </div>
+          )}
+
+          {/* 4. APERITIVOS, EXTRAS Y PORCIONES */}
+          {aperitivosYExtras.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                <Cookie className="h-4 w-4 text-purple-600" />
+                <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest">
+                  Aperitivos, Empanadas y Extras
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {aperitivosYExtras.map(renderTarjetaPlato)}
+              </div>
+            </div>
+          )}
+
         </div>
 
       </div>
@@ -1126,7 +1346,7 @@ export default function ClientMenu() {
           </button>
         ) : (
           <form onSubmit={agregarAdicionalALaLista} className="bg-white p-3 border border-gray-200 rounded-xl space-y-2 shadow-sm">
-            <input type="text" placeholder="Ej. Cola Extra o Porción de Maní" value={descAdicional} onChange={(e) => setDescAdicional(e.target.value)} className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white" required />
+            <input type="text" placeholder="Ej. Porción de Maní o Huevo Extra" value={descAdicional} onChange={(e) => setDescAdicional(e.target.value)} className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white" required />
             <select
               value={precioAdicional}
               onChange={(e) => setPrecioAdicional(e.target.value)}
@@ -1204,7 +1424,7 @@ export default function ClientMenu() {
         </div>
       )}
 
-      {/* POPUP FLOTANTE CENTRAL PARA LOS CHECKS DE CONFIRMACIÓN */}
+      {/* POPUP FLOTANTE CENTRAL */}
       {notificacion.visible && (
         <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-150">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl px-8 py-6 shadow-2xl flex flex-col items-center space-y-3 animate-in zoom-in-95 duration-150 text-white">
@@ -1214,7 +1434,7 @@ export default function ClientMenu() {
         </div>
       )}
 
-      {/* MODAL DE SELECCIÓN DE COMANDA ACTIVA A EDITAR */}
+      {/* MODAL EDITAR COMANDA */}
       {mostrarListaModificar && (
         <div className="fixed inset-0 bg-gray-950/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col space-y-4 text-left">
