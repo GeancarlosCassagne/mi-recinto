@@ -33,7 +33,7 @@ const obtenerFechaLocal = () => {
 };
 
 export default function ClientMenu() {
-  const [autenticado, setAutenticado] = useState(false);
+  const [autenticado, setAutenticado] = useState(true);
   const [passInput, setPassInput] = useState('');
   const [errorPass, setErrorPass] = useState(false);
   const CLAVE_ACCESO = '1234';
@@ -621,46 +621,7 @@ export default function ClientMenu() {
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-8 relative text-gray-900 bg-white">
       
-      {!autenticado && (
-        <div className="fixed inset-0 bg-slate-950/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white border border-gray-100 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-              <Lock className="h-8 w-8" />
-            </div>
-            
-            <div className="space-y-2">
-              <h2 className="text-xl font-black text-gray-950 tracking-tight">Acceso Restringido</h2>
-              <p className="text-xs text-gray-500 font-medium">
-                Estás intentando ingresar a la interfaz de <br/>
-                <strong className="text-emerald-800 font-black uppercase text-sm">"Menú de Servicio / Meseras"</strong>
-              </p>
-            </div>
-
-            <form onSubmit={validarAcceso} className="space-y-4">
-              <div>
-                <input 
-                  type="password" 
-                  value={passInput} 
-                  onChange={(e) => setPassInput(e.target.value)}
-                  placeholder="Ingresa la contraseña de acceso..."
-                  className={`w-full border rounded-2xl p-3.5 text-center font-bold text-sm outline-none transition-all ${
-                    errorPass ? 'border-red-500 bg-red-50 text-red-900 focus:ring-2 focus:ring-red-400' : 'border-gray-200 bg-gray-50 focus:border-emerald-700 focus:bg-white'
-                  }`}
-                  autoFocus
-                />
-                {errorPass && <p className="text-[11px] font-bold text-red-600 mt-2">Contraseña incorrecta. Inténtalo de nuevo.</p>}
-              </div>
-
-              <button 
-                type="submit" 
-                className="w-full bg-emerald-700 text-white font-extrabold text-xs uppercase py-4 rounded-2xl shadow-md hover:bg-emerald-800 transition tracking-wider"
-              >
-                Ingresar al Sistema
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      
 
       {/* BANNER SELECCIÓN DE MESERA */}
       <div className="md:col-span-3 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
