@@ -260,7 +260,6 @@ export default function CocinaPage() {
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Composición de la Orden:</p>
                     
                     <div className="space-y-2">
-                      {/* Si el pedido tiene especificaciones (Tonga o Almuerzos detallados) los mostramos directamente */}
                       {especificaciones.length > 0 ? (
                         especificaciones.map((item, idx) => {
                           const partes = item.trim().split(/\s+(.+)/);
@@ -268,22 +267,21 @@ export default function CocinaPage() {
                           const cantidad = tieneCantidad ? partes[0].toUpperCase() : '1X';
                           const textoDetalle = tieneCantidad ? partes[1] : item;
 
-                          // Coincidencia con detalle para extraer precio
                           const detCoincidente = p.detalles_pedido?.find(d => textoDetalle.toLowerCase().includes(d.platos?.nombre.toLowerCase()));
                           const precioUnit = Number(detCoincidente?.precio_unitario || detCoincidente?.platos?.precio || 0);
 
                           return (
-                            <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/90 border border-amber-500/30 p-2.5 rounded-xl text-slate-100 shadow-sm gap-2">
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0">
+                            <div key={idx} className="flex justify-between items-start text-xs bg-slate-900/90 border border-amber-500/30 p-2.5 rounded-xl text-slate-100 shadow-sm gap-2">
+                              <div className="flex items-start gap-2 min-w-0 flex-1">
+                                <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
                                   {cantidad}
                                 </span>
-                                <span className="font-bold capitalize leading-snug truncate">
+                                <span className="font-bold capitalize leading-snug break-words whitespace-normal flex-1">
                                   {textoDetalle}
                                 </span>
                               </div>
                               {precioUnit > 0 && (
-                                <span className="font-mono font-black text-xs text-amber-300 shrink-0">
+                                <span className="font-mono font-black text-xs text-amber-300 shrink-0 mt-0.5">
                                   ${precioUnit.toFixed(2)}
                                 </span>
                               )}
@@ -291,7 +289,6 @@ export default function CocinaPage() {
                           );
                         })
                       ) : (
-                        // Si son platos normales simples
                         p.detalles_pedido?.map((det, idx) => {
                           const precioUnit = Number(det.precio_unitario || det.platos?.precio || 0);
                           return (
@@ -312,7 +309,7 @@ export default function CocinaPage() {
                         })
                       )}
 
-                      {/* Platos sueltos como Bebidas o Adicionales si se pidieron junto a tongas */}
+                      {/* Bebidas y productos sueltos */}
                       {especificaciones.length > 0 && p.detalles_pedido?.filter(d => {
                         const n = d.platos?.nombre.toLowerCase();
                         return !n.includes('tonga') && !n.includes('almuerzo') && !n.includes('hornado') && !n.includes('criollo');
@@ -327,7 +324,6 @@ export default function CocinaPage() {
                       ))}
                     </div>
 
-                    {/* EXTRAS ESCRITOS */}
                     {adicionales && adicionales.length > 0 && (
                       <div className="mt-2 space-y-1">
                         {adicionales.map((item, index) => (
@@ -406,7 +402,7 @@ export default function CocinaPage() {
               <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                 {especificaciones.length > 0 ? (
                   especificaciones.map((item, idx) => (
-                    <p key={idx} className="text-xs text-amber-100 font-bold capitalize bg-slate-900/60 p-2 rounded-lg border border-slate-700">
+                    <p key={idx} className="text-xs text-amber-100 font-bold capitalize bg-slate-900/60 p-2 rounded-lg border border-slate-700 break-words">
                       • {item}
                     </p>
                   ))
