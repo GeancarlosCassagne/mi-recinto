@@ -139,7 +139,6 @@ export default function CocinaPage() {
     return { numeroMesa: rawMesa, esParaLlevar, mesera, especificaciones, adicionales };
   };
 
-  // 🟢 Clasificador de ítems para ordenar visualmente la comanda
   const clasificarItemsComanda = (especificaciones: string[], detalles: DetallePedido[]) => {
     const completos: { texto: string; cantidad: string; precio: number }[] = [];
     const segundos: { texto: string; cantidad: string; precio: number }[] = [];
@@ -170,7 +169,6 @@ export default function CocinaPage() {
         }
       });
 
-      // Productos sueltos como jugos, colas y aguas extras
       detalles?.filter(d => {
         const n = d.platos?.nombre.toLowerCase();
         return !n.includes('tonga') && !n.includes('almuerzo') && !n.includes('hornado') && !n.includes('criollo');
@@ -183,7 +181,6 @@ export default function CocinaPage() {
       });
 
     } else {
-      // Si el pedido no tiene especificaciones estructuradas
       detalles?.forEach(d => {
         const n = d.platos?.nombre.toLowerCase();
         const itemObj = {
@@ -203,6 +200,48 @@ export default function CocinaPage() {
     }
 
     return { completos, segundos, caldos, bebidasYExtras };
+  };
+
+  // 🟢 Función para renderizar el texto en lista limpia
+  const renderItemTextoLimpio = (texto: string) => {
+    let titulo = texto;
+    let componentes: string[] = [];
+
+    if (texto.includes('(Completo:')) {
+      titulo = 'Almuerzo Completo';
+      const partes = texto.replace('Almuerzo Del Día', '').replace('(Completo:', '').replace(')', '').trim();
+      componentes = partes.split('+').map(s => s.trim()).filter(Boolean);
+    } else if (texto.includes('(Solo Segundo:')) {
+      titulo = 'Solo Segundo';
+      const partes = texto.replace('Almuerzo Del Día', '').replace('(Solo Segundo:', '').replace(')', '').trim();
+      componentes = partes.split('+').map(s => s.trim()).filter(Boolean);
+    } else if (texto.includes('(Solo Caldo:')) {
+      titulo = 'Solo Caldo';
+      const partes = texto.replace('Almuerzo Del Día', '').replace('(Solo Caldo:', '').replace(')', '').trim();
+      componentes = partes.split('+').map(s => s.trim()).filter(Boolean);
+    }
+
+    return (
+      <div className="flex-1 min-w-0">
+        <p className="font-extrabold text-white text-xs capitalize leading-tight">
+          {titulo}
+        </p>
+        {componentes.length > 0 ? (
+          <div className="mt-1 space-y-0.5 pl-1 border-l-2 border-slate-700">
+            {componentes.map((comp, i) => (
+              <p key={i} className="text-[11px] font-medium text-slate-300 capitalize flex items-center gap-1.5">
+                <span className="text-emerald-400 text-[10px]">•</span>
+                <span>{comp}</span>
+              </p>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[11px] font-medium text-slate-300 capitalize">
+            {texto}
+          </p>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -252,7 +291,7 @@ export default function CocinaPage() {
 
       <header className="border-b border-slate-800 pb-4 mb-6 flex justify-between items-center max-w-7xl mx-auto">
         <h1 className="text-2xl font-black tracking-tight text-slate-100 flex items-center gap-2">
-          🍳 Monitor de Cocina <span className="text-emerald-400 font-medium text-sm bg-emerald-950/60 px-3 py-1 rounded-xl border border-emerald-900/50">Flujo Separado</span>
+          🍳 Monitor de Cocina <span className="text-emerald-400 font-medium text-sm bg-emerald-950/60 px-3 py-1 rounded-xl border border-emerald-900/50">Flujo General Diario</span>
         </h1>
         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Órdenes Sincronizadas</p>
       </header>
@@ -325,7 +364,7 @@ export default function CocinaPage() {
                   {/* CUERPO CON SECCIONES SEPARADAS */}
                   <div className="p-4 space-y-3.5">
 
-                    {/* 1. BLOQUE DE ALMUERZOS COMPLETOS */}
+                    {/* 1. ALMUERZOS COMPLETOS (LISTA LIMPIA) */}
                     {completos.length > 0 && (
                       <div className="space-y-1.5 bg-emerald-950/20 border border-emerald-800/40 p-2.5 rounded-2xl">
                         <div className="flex items-center gap-1.5 text-emerald-400 font-black text-[11px] uppercase tracking-wider border-b border-emerald-800/40 pb-1">
@@ -339,9 +378,7 @@ export default function CocinaPage() {
                                 <span className="bg-emerald-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
                                   {item.cantidad}
                                 </span>
-                                <span className="font-bold capitalize leading-snug break-words whitespace-normal flex-1">
-                                  {item.texto}
-                                </span>
+                                {renderItemTextoLimpio(item.texto)}
                               </div>
                               {item.precio > 0 && (
                                 <span className="font-mono font-black text-xs text-emerald-300 shrink-0 mt-0.5">
@@ -354,7 +391,7 @@ export default function CocinaPage() {
                       </div>
                     )}
 
-                    {/* 2. BLOQUE DE SEGUNDOS, TONGAS Y PLATOS FUERTES */}
+                    {/* 2. SOLO SEGUNDOS / FUERTES / TONGAS */}
                     {segundos.length > 0 && (
                       <div className="space-y-1.5 bg-amber-950/20 border border-amber-800/40 p-2.5 rounded-2xl">
                         <div className="flex items-center gap-1.5 text-amber-400 font-black text-[11px] uppercase tracking-wider border-b border-amber-800/40 pb-1">
@@ -368,9 +405,7 @@ export default function CocinaPage() {
                                 <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
                                   {item.cantidad}
                                 </span>
-                                <span className="font-bold capitalize leading-snug break-words whitespace-normal flex-1">
-                                  {item.texto}
-                                </span>
+                                {renderItemTextoLimpio(item.texto)}
                               </div>
                               {item.precio > 0 && (
                                 <span className="font-mono font-black text-xs text-amber-300 shrink-0 mt-0.5">
@@ -383,7 +418,7 @@ export default function CocinaPage() {
                       </div>
                     )}
 
-                    {/* 3. BLOQUE DE CALDOS Y SOPAS */}
+                    {/* 3. SOLO CALDOS / SOPAS */}
                     {caldos.length > 0 && (
                       <div className="space-y-1.5 bg-blue-950/20 border border-blue-800/40 p-2.5 rounded-2xl">
                         <div className="flex items-center gap-1.5 text-blue-400 font-black text-[11px] uppercase tracking-wider border-b border-blue-800/40 pb-1">
@@ -397,9 +432,7 @@ export default function CocinaPage() {
                                 <span className="bg-blue-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
                                   {item.cantidad}
                                 </span>
-                                <span className="font-bold capitalize leading-snug break-words whitespace-normal flex-1">
-                                  {item.texto}
-                                </span>
+                                {renderItemTextoLimpio(item.texto)}
                               </div>
                               {item.precio > 0 && (
                                 <span className="font-mono font-black text-xs text-blue-300 shrink-0 mt-0.5">
@@ -412,7 +445,7 @@ export default function CocinaPage() {
                       </div>
                     )}
 
-                    {/* 4. BLOQUE DE BEBIDAS Y EXTRAS */}
+                    {/* 4. BEBIDAS / EXTRAS SUELTOS */}
                     {bebidasYExtras.length > 0 && (
                       <div className="space-y-1.5 bg-slate-900/40 border border-slate-700/60 p-2.5 rounded-2xl">
                         <div className="flex items-center gap-1.5 text-slate-400 font-black text-[11px] uppercase tracking-wider border-b border-slate-700/60 pb-1">
