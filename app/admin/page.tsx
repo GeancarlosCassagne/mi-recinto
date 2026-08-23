@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { PlusCircle, DollarSign, Calendar, ClipboardList, Lock, X, Trash2, CheckSquare, Square, User, Eye, EyeOff, Clock, Milk } from 'lucide-react';
+import { PlusCircle, DollarSign, Calendar, ClipboardList, Lock, X, Trash2, CheckSquare, Square, User, Eye, EyeOff, Clock, Milk, Utensils } from 'lucide-react';
 
 interface Plato {
   id: string;
@@ -327,13 +327,12 @@ export default function AdminPage() {
     p.categoria !== 'presa_caldo'
   );
 
-  // 🟢 Jugos marcados actualmente en el menú diario
   const jugosSeleccionadosDelDia = platos.filter(p => 
     p.categoria === 'jugo' && platosSeleccionados.includes(p.id)
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-6 grid grid-cols-1 md:grid-cols-3 gap-8 w-full text-gray-900 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 w-full text-gray-900 max-w-7xl mx-auto space-y-6">
       
       {!autenticado && (
         <div className="fixed inset-0 bg-slate-950/85 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200">
@@ -377,7 +376,7 @@ export default function AdminPage() {
       )}
 
       {/* HEADER DE CONTROL */}
-      <div className="md:col-span-3 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-6">
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-6">
         <div className="flex items-center space-x-3 w-full sm:w-auto">
           <Calendar className="h-5 w-5 text-emerald-700" />
           <input type="date" value={fechaSeleccionada} onChange={(e) => setFechaSeleccionada(e.target.value)} className="border border-gray-200 rounded-xl p-2.5 text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-emerald-700" />
@@ -390,21 +389,34 @@ export default function AdminPage() {
         <button onClick={manejarCierreCaja} className={`w-full sm:w-auto font-bold text-xs uppercase px-6 py-3.5 rounded-xl text-white ${estadoCaja === 'abierta' ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-700 hover:bg-slate-800'}`}>{estadoCaja === 'abierta' ? 'Finalizar Jornada' : 'Habilitar Jornada'}</button>
       </div>
 
-      {/* COLUMNA IZQUIERDA: FORMULARIO + MÓDULOS DE DISPONIBILIDAD */}
-      <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 h-fit shadow-sm space-y-6">
-          <div>
-            <h2 className="text-lg font-bold pb-4 border-b mb-5 flex items-center gap-2"><PlusCircle className="text-emerald-700 h-5 w-5" /> Registrar Plato Base</h2>
-            <form onSubmit={guardarPlato} className="space-y-4">
-              <div><label className="block text-xs font-bold text-gray-500 mb-1">Nombre del Plato</label><input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. Ceviche" /></div>
-              <div><label className="block text-xs font-bold text-gray-500 mb-1">Precio Unitario (USD)</label><input type="text" value={precio} onChange={(e) => setPrecio(e.target.value)} className="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700" placeholder="Ej. 5.00" /></div>
+      {/* CUERPO PRINCIPAL EN 2 COLUMNAS PERFECTAMENTE EQUILIBRADAS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* COLUMNA IZQUIERDA (5 COLUMNAS): REGISTRO Y MESERAS */}
+        <div className="lg:col-span-5 space-y-6">
+          
+          {/* REGISTRAR PLATO BASE */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <h2 className="text-base font-bold pb-3 border-b mb-4 flex items-center gap-2 text-gray-950">
+              <PlusCircle className="text-emerald-700 h-5 w-5" /> Registrar Plato Base
+            </h2>
+            <form onSubmit={guardarPlato} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Nombre del Plato</label>
+                <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full border rounded-xl p-2.5 text-xs bg-white outline-none focus:border-emerald-700 font-bold" placeholder="Ej. Ceviche de Pescado" />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Precio Unitario (USD)</label>
+                <input type="text" value={precio} onChange={(e) => setPrecio(e.target.value)} className="w-full border rounded-xl p-2.5 text-xs bg-white outline-none focus:border-emerald-700 font-bold" placeholder="Ej. 5.00" />
+              </div>
               
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">Tipo / Categoría de Plato</label>
                 <select 
                   value={categoria} 
                   onChange={(e) => setCategoria(e.target.value)} 
-                  className="w-full border border-gray-200 rounded-xl p-2.5 text-sm bg-white outline-none focus:border-emerald-700 font-medium text-gray-800"
+                  className="w-full border border-gray-200 rounded-xl p-2.5 text-xs bg-white outline-none focus:border-emerald-700 font-bold text-gray-800"
                 >
                   <option value="segundo">🥩 Segundo (Plato Fuerte)</option>
                   <option value="caldo">🥣 Caldo / Sopa</option>
@@ -414,43 +426,234 @@ export default function AdminPage() {
                 </select>
               </div>
 
-              <button type="submit" className="w-full bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl shadow-sm hover:bg-emerald-800 transition">Guardar en Banco General</button>
+              <button type="submit" className="w-full bg-emerald-700 text-white font-bold text-xs uppercase py-3 rounded-xl shadow-sm hover:bg-emerald-800 transition tracking-wider">
+                Guardar en Banco General
+              </button>
             </form>
           </div>
 
-          {/* MÓDULOS DE DISPONIBILIDAD DE COCINA Y JUGOS */}
-          <div className="border-t pt-5 space-y-4">
-            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+          {/* PERSONAL DE SERVICIO (MESERAS) */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-gray-950 flex items-center gap-2 border-b pb-3">
+              <User className="h-5 w-5 text-emerald-700" /> Personal de Servicio (Meseras)
+            </h2>
+
+            <form onSubmit={guardarMesera} className="flex gap-2">
+              <input 
+                type="text" 
+                value={nuevaMesera} 
+                onChange={(e) => setNuevaMesera(e.target.value)} 
+                placeholder="Nombre de mesera..." 
+                className="w-full border rounded-xl p-2.5 text-xs bg-white outline-none focus:border-emerald-700 font-bold text-gray-900"
+              />
+              <button type="submit" className="bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-emerald-800 transition shrink-0">
+                Agregar
+              </button>
+            </form>
+
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 pt-1">
+              {listadoMeseras.length === 0 ? (
+                <p className="text-xs text-gray-400 italic text-center py-2">No hay meseras registradas.</p>
+              ) : (
+                listadoMeseras.map((m) => (
+                  <div key={m.id} className="flex justify-between items-center p-2.5 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold text-gray-800 uppercase">
+                    <span>👤 {m.nombre}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => eliminarMesera(m.id, m.nombre)} 
+                      className="p-1 text-red-500 hover:text-red-700 transition"
+                      title="Eliminar mesera"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* COLUMNA DERECHA (7 COLUMNAS): PLANIFICADOR + DISPONIBILIDAD COCINA */}
+        <div className="lg:col-span-7 space-y-6">
+          
+          {/* PLANIFICADOR MENÚ DEL DÍA */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col shadow-sm">
+            <div className="flex justify-between border-b border-gray-100 pb-3 mb-3 items-center">
+              <h2 className="text-base font-bold text-gray-950 flex items-center gap-2">
+                <Utensils className="h-5 w-5 text-emerald-700" /> Planificador del Menú del Día
+              </h2>
+              <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold px-2 py-0.5 rounded-md uppercase">
+                Índice Activo
+              </span>
+            </div>
+
+            <div className="space-y-2 overflow-y-auto pr-1.5 max-h-[360px]">
+              {platosPlanificadorVisibles.map((plato) => {
+                const esFijo = esPlatoFijoInmutable(plato.nombre, plato.categoria);
+                const marcado = esFijo || platosSeleccionados.includes(plato.id);
+
+                return (
+                  <div 
+                    key={plato.id} 
+                    className={`p-3 border rounded-xl flex justify-between items-center transition-all gap-3 shadow-sm ${
+                      marcado ? 'bg-emerald-50/40 border-emerald-200' : 'bg-gray-50/60 border-gray-200 hover:bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <button 
+                        type="button"
+                        onClick={() => alternarSeleccionPlato(plato.id, plato.nombre, plato.categoria)} 
+                        className="flex items-center justify-center text-gray-400 hover:text-emerald-700 transition-colors focus:outline-none shrink-0"
+                      >
+                        {marcado ? (
+                          <CheckSquare className={`h-4 w-4 ${esFijo ? 'text-gray-400' : 'text-emerald-700'}`} />
+                        ) : (
+                          <Square className="h-4 w-4 text-gray-300" />
+                        )}
+                      </button>
+
+                      <div className="min-w-0 flex-1">
+                        {idPlatoEditando === plato.id ? (
+                          <div className="flex items-center gap-1.5 my-0.5">
+                            <input 
+                              type="text" 
+                              value={nuevoNombrePlato} 
+                              onChange={(e) => setNuevoNombrePlato(e.target.value)} 
+                              className="text-xs font-bold border border-emerald-600 rounded-lg px-2 py-1 bg-white outline-none text-gray-900 w-full"
+                              autoFocus
+                            />
+                            <div className="relative shrink-0 w-20">
+                              <span className="absolute left-2 top-1 text-xs text-gray-400 font-bold">$</span>
+                              <input 
+                                type="text" 
+                                value={nuevoPrecioPlato} 
+                                onChange={(e) => setNuevoPrecioPlato(e.target.value)} 
+                                className="text-xs font-bold border border-emerald-600 rounded-lg pl-5 pr-1 py-1 bg-white outline-none text-gray-900 w-full"
+                              />
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => guardarCambiosPlato(plato.id)} 
+                              className="bg-emerald-700 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-lg hover:bg-emerald-800 shrink-0"
+                            >
+                              💾
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => setIdPlatoEditando(null)} 
+                              className="text-gray-400 hover:text-gray-600 text-xs font-bold shrink-0 px-1"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-xs capitalize text-gray-950 truncate">{plato.nombre}</h4>
+                            <span className="text-[11px] font-black text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
+                              ${Number(plato.precio).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="mt-1 flex items-center space-x-1">
+                          <select 
+                            value={plato.categoria || 'segundo'} 
+                            onChange={(e) => cambiarCategoriaPlato(plato.id, e.target.value)}
+                            className="text-[10px] font-bold text-gray-600 bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none focus:border-emerald-600"
+                          >
+                            <option value="segundo">🥩 Segundo</option>
+                            <option value="caldo">🥣 Caldo</option>
+                            <option value="fijo">🍃 Fijo</option>
+                            <option value="jugo">🧃 Jugo del Día</option>
+                            <option value="bebida">🥤 Bebida Comercial</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-1 shrink-0">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setIdPlatoEditando(plato.id);
+                          setNuevoNombrePlato(plato.nombre);
+                          setNuevoPrecioPlato(Number(plato.precio).toFixed(2));
+                        }}
+                        className="p-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        title="Editar Nombre y Precio"
+                      >
+                        ✏️
+                      </button>
+
+                      <button 
+                        type="button"
+                        onClick={() => alternarDisponibilidad(plato.id, plato.disponible)}
+                        className={`p-1.5 rounded-lg border flex items-center justify-center ${
+                          plato.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-600'
+                        }`}
+                        title={plato.disponible ? 'Marcar Agotado' : 'Marcar Disponible'}
+                      >
+                        {plato.disponible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                      </button>
+
+                      <button 
+                        type="button"
+                        onClick={() => eliminarPlato(plato.id, plato.nombre, plato.categoria)}
+                        className={`p-1.5 rounded-lg border ${
+                          esFijo ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-600'
+                        }`}
+                        title={esFijo ? 'Eliminar Fijo' : 'Eliminar Plato'}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button 
+              onClick={guardarMenuDiario} 
+              className="w-full mt-3 bg-gray-950 text-white font-extrabold text-xs uppercase py-3 rounded-xl shadow-md hover:bg-gray-900 transition tracking-wider"
+            >
+              Establecer Menú Diario
+            </button>
+          </div>
+
+          {/* 🟢 PANEL DE DISPONIBILIDAD DE COCINA (OCUPA EL ESPACIO INFERIOR) */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
+            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest border-b pb-2">
               Disponibilidad Activa de Cocina
             </h3>
 
-            <div className="grid grid-cols-1 gap-3">
-              {/* 🟢 NUEVO: DISPONIBILIDAD REACTIVA DE JUGOS DEL DÍA */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              
+              {/* 1. JUGOS DEL DÍA */}
               <div className="bg-purple-50/60 border border-purple-200 rounded-2xl p-3.5 space-y-2">
                 <div className="flex justify-between items-center border-b border-purple-200/60 pb-1.5">
-                  <h4 className="text-xs font-black text-purple-950 uppercase flex items-center gap-1.5">
+                  <h4 className="text-xs font-black text-purple-950 uppercase flex items-center gap-1">
                     <Milk className="h-3.5 w-3.5 text-purple-700" /> Jugos del Día
                   </h4>
-                  <span className="text-[9px] font-bold text-purple-800 bg-purple-100 px-2 py-0.5 rounded">
-                    {jugosSeleccionadosDelDia.length} Marcados
+                  <span className="text-[9px] font-bold text-purple-800 bg-purple-100 px-1.5 py-0.5 rounded">
+                    {jugosSeleccionadosDelDia.length} Activos
                   </span>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                   {jugosSeleccionadosDelDia.length === 0 ? (
-                    <p className="text-[11px] text-gray-400 italic py-1 text-center">
-                      Marca jugos en el menú del día para controlar su disponibilidad.
+                    <p className="text-[11px] text-gray-400 italic py-2 text-center">
+                      Marca jugos en el menú del día.
                     </p>
                   ) : (
                     jugosSeleccionadosDelDia.map((j) => (
-                      <div key={j.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-xl border border-purple-100 shadow-sm">
-                        <span className="font-bold text-gray-800 capitalize">{j.nombre}</span>
+                      <div key={j.id} className="flex justify-between items-center text-xs p-1.5 px-2 bg-white rounded-xl border border-purple-100 shadow-sm">
+                        <span className="font-bold text-gray-800 capitalize truncate pr-1">{j.nombre}</span>
                         <button 
                           type="button" 
                           onClick={() => alternarDisponibilidad(j.id, j.disponible)}
-                          className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                          className={`p-1 rounded-lg border shrink-0 ${
                             j.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'
                           }`}
-                          title={j.disponible ? 'Marcar como Agotado' : 'Marcar como Disponible'}
                         >
                           {j.disponible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                         </button>
@@ -460,20 +663,20 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* 1. PRESAS CRIOLLAS */}
+              {/* 2. PRESAS CRIOLLAS */}
               <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-3.5 space-y-2">
                 <div className="flex justify-between items-center border-b border-amber-200/60 pb-1.5">
                   <h4 className="text-xs font-black text-amber-950 uppercase">🐓 Presas Criollas</h4>
-                  <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">Tonga + Seco</span>
+                  <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">Tonga + Seco</span>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                   {platos.filter(p => p.categoria === 'presa_criolla').map((comp) => (
-                    <div key={comp.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-xl border border-amber-100 shadow-sm">
+                    <div key={comp.id} className="flex justify-between items-center text-xs p-1.5 px-2 bg-white rounded-xl border border-amber-100 shadow-sm">
                       <span className="font-bold text-gray-800 capitalize">{comp.nombre.replace(' Criolla', '')}</span>
                       <button 
                         type="button" 
                         onClick={() => alternarDisponibilidad(comp.id, comp.disponible)}
-                        className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                        className={`p-1 rounded-lg border shrink-0 ${
                           comp.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'
                         }`}
                       >
@@ -484,20 +687,20 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* 2. PRESAS DE GRANJA */}
+              {/* 3. PRESAS DE GRANJA */}
               <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-3.5 space-y-2">
                 <div className="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
                   <h4 className="text-xs font-black text-emerald-950 uppercase">🍗 Presas Granja</h4>
-                  <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">Tonga + Horneado</span>
+                  <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">Tonga + Horneado</span>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                   {platos.filter(p => p.categoria === 'presa_granja').map((comp) => (
-                    <div key={comp.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-xl border border-emerald-100 shadow-sm">
+                    <div key={comp.id} className="flex justify-between items-center text-xs p-1.5 px-2 bg-white rounded-xl border border-emerald-100 shadow-sm">
                       <span className="font-bold text-gray-800 capitalize">{comp.nombre.replace(' Granja', '')}</span>
                       <button 
                         type="button" 
                         onClick={() => alternarDisponibilidad(comp.id, comp.disponible)}
-                        className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                        className={`p-1 rounded-lg border shrink-0 ${
                           comp.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'
                         }`}
                       >
@@ -508,20 +711,20 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* 3. PRESAS PARA CALDO */}
+              {/* 4. PRESAS PARA CALDO */}
               <div className="bg-blue-50/50 border border-blue-200 rounded-2xl p-3.5 space-y-2">
                 <div className="flex justify-between items-center border-b border-blue-200/60 pb-1.5">
-                  <h4 className="text-xs font-black text-blue-950 uppercase">🥣 Presas para Caldo</h4>
-                  <span className="text-[9px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded">Exclusivo Caldos</span>
+                  <h4 className="text-xs font-black text-blue-950 uppercase">🥣 Presas Caldo</h4>
+                  <span className="text-[9px] font-bold text-blue-800 bg-blue-100 px-1.5 py-0.5 rounded">Exclusivo Caldos</span>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                   {platos.filter(p => p.categoria === 'presa_caldo').map((comp) => (
-                    <div key={comp.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-xl border border-blue-100 shadow-sm">
+                    <div key={comp.id} className="flex justify-between items-center text-xs p-1.5 px-2 bg-white rounded-xl border border-blue-100 shadow-sm">
                       <span className="font-bold text-gray-800 capitalize">{comp.nombre.replace(' Caldo', '')}</span>
                       <button 
                         type="button" 
                         onClick={() => alternarDisponibilidad(comp.id, comp.disponible)}
-                        className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                        className={`p-1 rounded-lg border shrink-0 ${
                           comp.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'
                         }`}
                       >
@@ -531,193 +734,12 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+
             </div>
           </div>
+
         </div>
 
-        {/* MÓDULO GESTIÓN DE MESERAS */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
-          <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 border-b pb-3">
-            <User className="h-5 w-5 text-emerald-700" /> Personal de Servicio (Meseras)
-          </h2>
-
-          <form onSubmit={guardarMesera} className="flex gap-2">
-            <input 
-              type="text" 
-              value={nuevaMesera} 
-              onChange={(e) => setNuevaMesera(e.target.value)} 
-              placeholder="Nombre de mesera..." 
-              className="w-full border rounded-xl p-2.5 text-xs bg-white outline-none focus:border-emerald-700 font-bold text-gray-900"
-            />
-            <button type="submit" className="bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-emerald-800 transition shrink-0">
-              Agregar
-            </button>
-          </form>
-
-          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 pt-2">
-            {listadoMeseras.length === 0 ? (
-              <p className="text-xs text-gray-400 italic text-center py-2">No hay meseras registradas.</p>
-            ) : (
-              listadoMeseras.map((m) => (
-                <div key={m.id} className="flex justify-between items-center p-2.5 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold text-gray-800 uppercase">
-                  <span>👤 {m.nombre}</span>
-                  <button 
-                    type="button" 
-                    onClick={() => eliminarMesera(m.id, m.nombre)} 
-                    className="p-1 text-red-500 hover:text-red-700 transition"
-                    title="Eliminar mesera"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* PLANIFICADOR MENÚ DIARIO */}
-      <div className="md:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 flex flex-col h-fit shadow-sm">
-        <div className="flex justify-between border-b border-gray-100 pb-4 mb-4 items-center">
-          <h2 className="text-lg font-bold text-gray-950">Planificador del Menú del Día</h2>
-          <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold px-2.5 py-1 rounded-md uppercase">Índice Activo</span>
-        </div>
-
-        <div className="space-y-3 overflow-y-auto pr-1.5 pb-2 max-h-[520px]">
-          {platosPlanificadorVisibles.map((plato) => {
-            const esFijo = esPlatoFijoInmutable(plato.nombre, plato.categoria);
-            const marcado = esFijo || platosSeleccionados.includes(plato.id);
-
-            return (
-              <div 
-                key={plato.id} 
-                className={`p-3.5 border rounded-2xl flex justify-between items-center transition-all gap-4 shadow-sm ${
-                  marcado ? 'bg-emerald-50/40 border-emerald-200' : 'bg-gray-50/60 border-gray-200 hover:border-gray-300 hover:bg-white'
-                }`}
-              >
-                <div className="flex items-center space-x-3.5 flex-1 min-w-0">
-                  <button 
-                    type="button"
-                    onClick={() => alternarSeleccionPlato(plato.id, plato.nombre, plato.categoria)} 
-                    className="flex items-center justify-center text-gray-400 hover:text-emerald-700 transition-colors focus:outline-none shrink-0"
-                  >
-                    {marcado ? (
-                      <CheckSquare className={`h-5 w-5 ${esFijo ? 'text-gray-400' : 'text-emerald-700'}`} />
-                    ) : (
-                      <Square className="h-5 w-5 text-gray-300" />
-                    )}
-                  </button>
-
-                  <div className="min-w-0 flex-1">
-                    {idPlatoEditando === plato.id ? (
-                      <div className="flex items-center gap-1.5 my-0.5">
-                        <input 
-                          type="text" 
-                          value={nuevoNombrePlato} 
-                          onChange={(e) => setNuevoNombrePlato(e.target.value)} 
-                          placeholder="Nombre..."
-                          className="text-xs font-bold border border-emerald-600 rounded-lg px-2 py-1 bg-white outline-none text-gray-900 w-full shadow-inner"
-                          autoFocus
-                        />
-                        <div className="relative shrink-0 w-20">
-                          <span className="absolute left-2 top-1 text-xs text-gray-400 font-bold">$</span>
-                          <input 
-                            type="text" 
-                            value={nuevoPrecioPlato} 
-                            onChange={(e) => setNuevoPrecioPlato(e.target.value)} 
-                            placeholder="0.00"
-                            className="text-xs font-bold border border-emerald-600 rounded-lg pl-5 pr-1 py-1 bg-white outline-none text-gray-900 w-full shadow-inner"
-                          />
-                        </div>
-                        <button 
-                          type="button" 
-                          onClick={() => guardarCambiosPlato(plato.id)} 
-                          className="bg-emerald-700 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-lg hover:bg-emerald-800 shrink-0"
-                        >
-                          💾
-                        </button>
-                        <button 
-                          type="button" 
-                          onClick={() => setIdPlatoEditando(null)} 
-                          className="text-gray-400 hover:text-gray-600 text-xs font-bold shrink-0 px-1"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-sm capitalize text-gray-950 truncate">{plato.nombre}</h4>
-                        <span className="text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
-                          ${Number(plato.precio).toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="mt-1 flex items-center space-x-1">
-                      <select 
-                        value={plato.categoria || 'segundo'} 
-                        onChange={(e) => cambiarCategoriaPlato(plato.id, e.target.value)}
-                        className="text-[11px] font-bold text-gray-600 bg-white border border-gray-200 rounded-lg px-2 py-0.5 outline-none focus:border-emerald-600 transition shadow-sm"
-                      >
-                        <option value="segundo">🥩 Segundo</option>
-                        <option value="caldo">🥣 Caldo</option>
-                        <option value="fijo">🍃 Fijo</option>
-                        <option value="jugo">🧃 Jugo del Día</option>
-                        <option value="bebida">🥤 Bebida Comercial</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-1.5 shrink-0">
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      setIdPlatoEditando(plato.id);
-                      setNuevoNombrePlato(plato.nombre);
-                      setNuevoPrecioPlato(Number(plato.precio).toFixed(2));
-                    }}
-                    className="p-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all"
-                    title="Editar Nombre y Precio del Plato"
-                  >
-                    ✏️
-                  </button>
-
-                  <button 
-                    type="button"
-                    onClick={() => alternarDisponibilidad(plato.id, plato.disponible)}
-                    className={`p-2 rounded-xl border flex items-center justify-center transition-all ${
-                      plato.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100'
-                    }`}
-                    title={plato.disponible ? 'Marcar como Agotado' : 'Marcar como Disponible'}
-                  >
-                    {plato.disponible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  </button>
-
-                  <button 
-                    type="button"
-                    onClick={() => eliminarPlato(plato.id, plato.nombre, plato.categoria)}
-                    className={`p-2 rounded-xl border transition-all ${
-                      esFijo 
-                        ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' 
-                        : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
-                    }`}
-                    title={esFijo ? 'Eliminar Plato Fijo (Requiere Confirmación)' : 'Eliminar Plato Permanentemente'}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <button 
-          onClick={guardarMenuDiario} 
-          className="w-full mt-4 bg-gray-950 text-white font-extrabold text-xs uppercase py-4 rounded-xl shadow-md hover:bg-gray-900 transition tracking-wider"
-        >
-          Establecer Menú Diario
-        </button>
       </div>
 
       {/* MODAL HISTORIAL DE COMANDAS */}
