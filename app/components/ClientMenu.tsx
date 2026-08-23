@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Utensils, ShoppingCart, Plus, Minus, CheckCircle, PlusCircle, Trash2, ChevronRight, User, AlertTriangle, Sparkles, Bike, UtensilsCrossed, GlassWater, Milk, Flame, Coffee, Cookie } from 'lucide-react';
+import { Utensils, ShoppingCart, Plus, Minus, CheckCircle, PlusCircle, Trash2, ChevronRight, User, AlertTriangle, Sparkles, Bike, UtensilsCrossed, GlassWater, Milk, Flame, Coffee, Cookie, Edit3 } from 'lucide-react';
 
 interface Plato {
   id: string;
@@ -193,6 +193,17 @@ export default function ClientMenu() {
     };
   }, []);
 
+  const abrirModalEditarOrden = async () => {
+    const hoy = obtenerFechaLocal();
+    const { data } = await supabase
+      .from('pedidos')
+      .select('id, mesa, total, detalles_pedido(cantidad, plato_id, precio_unitario, platos(nombre))')
+      .eq('estado', 'pendiente')
+      .gte('created_at', `${hoy} 00:00:00`);
+    if (data) setPedidosActivos(data);
+    setMostrarListaModificar(true);
+  };
+
   const cargarPedidoEnCarrito = (pedido: any) => {
     let textoMesa = pedido.mesa;
     if (textoMesa.includes('[TIPO:LLEVAR]')) {
@@ -264,12 +275,6 @@ export default function ClientMenu() {
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Criolla');
-    } 
-    else if (nombreLimpio.includes('hornado') || nombreLimpio.includes('horneado')) {
-      setTongaSeleccionada(plato);
-      setConfigurandoTonga(true);
-      setPasoTonga('presa');
-      setTipoGallina('Granja');
     } 
     else if (nombreLimpio.includes('caldo criollo')) {
       setTongaSeleccionada(plato);
@@ -677,12 +682,9 @@ export default function ClientMenu() {
   const platosTradicionales = platos.filter(p => {
     const n = p.nombre.toLowerCase();
     const esHornado = n.includes('hornado') || n.includes('horneado');
-    
     return (n.includes('tonga') || n.includes('seco criollo') || n.includes('caldo criollo')) &&
            !esHornado &&
-           p.categoria !== 'presa_criolla' && 
-           p.categoria !== 'presa_granja' && 
-           p.categoria !== 'presa_caldo';
+           p.categoria !== 'presa_criolla' && p.categoria !== 'presa_granja' && p.categoria !== 'presa_caldo';
   });
 
   const jugosNaturales = platos.filter(p => {
@@ -699,7 +701,7 @@ export default function ClientMenu() {
   const aperitivosYExtras = platos.filter(p => {
     const n = p.nombre.toLowerCase();
     const esEstructural = p.categoria === 'presa_criolla' || p.categoria === 'presa_granja' || p.categoria === 'presa_caldo' || p.categoria === 'segundo' || p.categoria === 'caldo';
-    const esTradicional = n.includes('tonga') || n.includes('seco criollo') || n.includes('hornado') || n.includes('caldo criollo') || n.includes('almuerzo del día');
+    const esTradicional = n.includes('tonga') || n.includes('seco criollo') || n.includes('hornado') || n.includes('horneado') || n.includes('caldo criollo') || n.includes('almuerzo del día');
     const esBebida = p.categoria === 'jugo' || p.categoria === 'bebida' || n.includes('jugo') || n.includes('chicha') || n.includes('quaker') || n.includes('cola') || n.includes('agua');
     
     return !esEstructural && !esTradicional && !esBebida;
@@ -716,7 +718,6 @@ export default function ClientMenu() {
     );
   }
 
-  // 🟢 Tarjeta con estilo adaptable según categoría
   const renderTarjetaPlato = (plato: Plato, tema: 'emerald' | 'amber' | 'sky' | 'purple') => {
     const estilosBoton = {
       emerald: 'bg-emerald-700 hover:bg-emerald-800 text-white',
@@ -762,10 +763,10 @@ export default function ClientMenu() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-8 relative text-gray-900 bg-white">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 relative text-gray-900 bg-white">
 
-      {/* BANNER SELECCIÓN DE MESERA */}
-      <div className="md:col-span-3 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+      {/* 1️⃣ BANNER SELECCIÓN DE MESERA (LIMPIO) */}
+      <div className="md:col-span-3 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center space-x-2.5">
           <User className="h-5 w-5 text-emerald-800" />
           <div>
@@ -773,41 +774,27 @@ export default function ClientMenu() {
             <p className="text-xs text-emerald-700 font-medium">Selecciona tu nombre antes de ingresar comandas</p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3 justify-center w-full sm:w-auto">
+        <div className="w-full sm:w-auto">
           <select
             value={mesera}
             onChange={(e) => {
               setMesera(e.target.value);
               if (e.target.value) mostrarCheckCentral('Seleccionado');
             }}
-            className="border border-emerald-200 text-emerald-950 font-bold text-xs rounded-xl p-2.5 bg-white outline-none focus:ring-2 focus:ring-emerald-700 w-full sm:w-44 shadow-sm"
+            className="border border-emerald-200 text-emerald-950 font-bold text-xs rounded-xl p-2.5 bg-white outline-none focus:ring-2 focus:ring-emerald-700 w-full sm:w-52 shadow-sm"
           >
             <option value="">Seleccionar Mesera...</option>
             {listadoMeseras.map((m) => (
               <option key={m} value={m}>{m.toUpperCase()}</option>
             ))}
           </select>
-
-          <button 
-            onClick={async () => {
-              const hoy = obtenerFechaLocal();
-              const { data } = await supabase
-                .from('pedidos')
-                .select('id, mesa, total, detalles_pedido(cantidad, plato_id, precio_unitario, platos(nombre))')
-                .eq('estado', 'pendiente')
-                .gte('created_at', `${hoy} 00:00:00`);
-              if (data) setPedidosActivos(data);
-              setMostrarListaModificar(true);
-            }}
-            className="bg-amber-600 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm hover:bg-amber-700 transition flex items-center gap-1 w-full sm:w-auto justify-center"
-          >
-            ✏️ Editar Orden
-          </button>
         </div>
       </div>
 
       {/* SECCIÓN DEL MENÚ */}
       <div className="md:col-span-2 space-y-6">
+        
+        {/* 2️⃣ SELECTOR DE MODALIDAD (SERVIRSE / LLEVAR) */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-5">
           <div className="flex items-center space-x-3">
             <Utensils className="h-7 w-7 text-emerald-700" />
@@ -1014,7 +1001,7 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* MODAL CONFIGURADOR TONGA, SECOS, HORNADOS Y CALDOS */}
+        {/* MODAL CONFIGURADOR TONGA, SECOS Y CALDOS */}
         {configurandoTonga && (
           <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4">
             <div className="flex justify-between items-center border-b border-emerald-100 pb-3">
@@ -1192,7 +1179,7 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* SECCIÓN DESTAQUE ALMUERZO DEL DÍA */}
+        {/* 3️⃣ ARMAR ALMUERZO DEL DÍA */}
         {platoAlmuerzoDelDia && (
           <div className="bg-gradient-to-r from-emerald-800 to-emerald-950 text-white rounded-2xl p-6 shadow-md border border-emerald-900 flex flex-col sm:flex-row justify-between items-center gap-6 relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 text-white/5 transform rotate-12 transition-transform group-hover:scale-110 duration-300">
@@ -1225,10 +1212,15 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* 🟢 SECCIONES CON CUADROS DE COLORES ELEGANTES Y SOBRIOS */}
+        {/* 4️⃣ PANEL DE PEDIDO / CARRITO EN MÓVIL */}
+        <div className="block md:hidden">
+          {renderPanelCarrito()}
+        </div>
+
+        {/* 5️⃣ SECCIONES CON CUADROS DE COLORES ELEGANTES */}
         <div className="space-y-6">
           
-          {/* 1. CUADRO VERDE ESMERALDA: PLATOS TRADICIONALES Y FUERTES */}
+          {/* 1. PLATOS TRADICIONALES Y FUERTES */}
           {platosTradicionales.length > 0 && (
             <div className="bg-emerald-50/40 border border-emerald-200/80 rounded-2xl p-4.5 shadow-sm space-y-3">
               <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
@@ -1248,7 +1240,7 @@ export default function ClientMenu() {
             </div>
           )}
 
-          {/* 2. CUADRO ÁMBAR / MIEL: JUGOS Y BEBIDAS NATURALES */}
+          {/* 2. JUGOS Y BEBIDAS NATURALES */}
           {jugosNaturales.length > 0 && (
             <div className="bg-amber-50/40 border border-amber-200/80 rounded-2xl p-4.5 shadow-sm space-y-3">
               <div className="flex items-center justify-between border-b border-amber-200/60 pb-2">
@@ -1268,7 +1260,7 @@ export default function ClientMenu() {
             </div>
           )}
 
-          {/* 3. CUADRO AZUL PIZARRA / CIELO: BEBIDAS COMERCIALES */}
+          {/* 3. BEBIDAS COMERCIALES */}
           {bebidasComerciales.length > 0 && (
             <div className="bg-sky-50/40 border border-sky-200/80 rounded-2xl p-4.5 shadow-sm space-y-3">
               <div className="flex items-center justify-between border-b border-sky-200/60 pb-2">
@@ -1288,7 +1280,7 @@ export default function ClientMenu() {
             </div>
           )}
 
-          {/* 4. CUADRO PÚRPURA / LAVANDA: APERITIVOS Y EXTRAS */}
+          {/* 4. APERITIVOS Y EXTRAS */}
           {aperitivosYExtras.length > 0 && (
             <div className="bg-purple-50/40 border border-purple-200/80 rounded-2xl p-4.5 shadow-sm space-y-3">
               <div className="flex items-center justify-between border-b border-purple-200/60 pb-2">
@@ -1312,95 +1304,9 @@ export default function ClientMenu() {
 
       </div>
 
-      {/* CARRITO LATERAL */}
-      <div className="border border-gray-200 rounded-2xl p-5 bg-gray-50 h-fit space-y-5">
-        <div className="flex items-center space-x-2 border-b border-gray-200 pb-3"><ShoppingCart className="h-5 w-5 text-emerald-800" /><h2 className="text-lg font-bold text-gray-950">Tu Pedido</h2></div>
-        
-        <div>
-          <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
-            {tipoEntrega === 'llevar' ? 'Nombre del Cliente / Identificador' : 'Mesa / Identificador'}
-          </label>
-          {tipoEntrega === 'llevar' ? (
-            <input 
-              type="text" 
-              placeholder="Nombre del Cliente (Ej. Juan Pérez)" 
-              value={mesa} 
-              onChange={(e) => setMesa(e.target.value)} 
-              className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm font-bold" 
-            />
-          ) : (
-            <select
-              value={mesa}
-              onChange={(e) => setMesa(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm font-black text-gray-800"
-            >
-              <option value="">Selecciona una Mesa...</option>
-              {Array.from({ length: 35 }, (_, i) => i + 1).map((num) => (
-                <option key={num} value={`${num}`}>{`MESA ${num}`}</option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        <div className="divide-y divide-gray-200/60 max-h-60 overflow-y-auto pr-1">
-          {carrito.length === 0 && adicionales.length === 0 && <p className="text-gray-400 text-center text-xs py-6 italic">No has agregado elementos.</p>}
-          {carrito.map((item) => (
-            <div key={item.idUnico} className="py-3 flex justify-between items-center">
-              <div className="pr-2">
-                <h4 className="font-bold text-gray-950 text-sm capitalize">{item.plato.nombre}</h4>
-                {item.detallesPersonalizados && <p className="text-xs text-emerald-700 font-medium capitalize mt-0.5">{item.detallesPersonalizados}</p>}
-                <p className="text-xs text-gray-500 mt-0.5">${(Number(item.plato.precio) * item.grid).toFixed(2)}</p>
-              </div>
-              <div className="flex items-center space-x-2 bg-white border rounded-xl p-1 shadow-sm">
-                <button onClick={() => modificarCantidad(item.idUnico, 'decrementar')} className="p-1 hover:bg-gray-100 rounded-md text-gray-600 transition"><Minus className="h-3 w-3" /></button>
-                <span className="font-bold text-gray-900 text-xs w-4 text-center">{item.grid}</span>
-                <button onClick={() => modificarCantidad(item.idUnico, 'incrementar')} className="p-1 hover:bg-gray-100 rounded-md text-gray-600 transition"><Plus className="h-3 w-3" /></button>
-              </div>
-            </div>
-          ))}
-
-          {/* LISTA DE EXTRAS */}
-          {adicionales.map((adi) => (
-            <div key={adi.id} className="py-3 flex justify-between items-center bg-emerald-50/40 px-2 rounded-xl mt-1.5">
-              <div>
-                <h4 className="font-bold text-emerald-900 text-xs capitalize">[Extra] {adi.descripcion}</h4>
-                <p className="text-xs text-emerald-700 mt-0.5">${adi.precio.toFixed(2)}</p>
-              </div>
-              <button onClick={() => setAdicionales(adicionales.filter((a) => a.id !== adi.id))} className="p-1 text-gray-400 hover:text-red-600 transition"><Trash2 className="h-3.5 w-3.5" /></button>
-            </div>
-          ))}
-        </div>
-
-        {/* BOTÓN ADICIONALES */}
-        {!mostrarFormAdicional ? (
-          <button type="button" onClick={() => setMostrarFormAdicional(true)} className="w-full border border-dashed border-emerald-300 text-emerald-800 bg-white py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1 hover:bg-emerald-50/30 transition shadow-sm">
-            <PlusCircle className="h-3.5 w-3.5 text-emerald-700" />
-            <span>Agregar Nota o Adicional</span>
-          </button>
-        ) : (
-          <form onSubmit={agregarAdicionalALaLista} className="bg-white p-3 border border-gray-200 rounded-xl space-y-2 shadow-sm">
-            <input type="text" placeholder="Ej. Porción de Maní o Huevo Extra" value={descAdicional} onChange={(e) => setDescAdicional(e.target.value)} className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white" required />
-            <select
-              value={precioAdicional}
-              onChange={(e) => setPrecioAdicional(e.target.value)}
-              className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white font-bold text-gray-700"
-              required
-            >
-              <option value="">Seleccionar Precio Adicional...</option>
-              <option value="0.50">{"$0.50 Centavos"}</option>
-              <option value="1.00">{"$1.00 Dólar"}</option>
-            </select>
-            <div className="flex gap-2 justify-end text-[11px] font-bold pt-1">
-              <button type="button" onClick={() => setMostrarFormAdicional(false)} className="text-gray-400 hover:text-gray-600">Cancelar</button>
-              <button type="submit" className="px-3 py-1 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition">Añadir</button>
-            </div>
-          </form>
-        )}
-
-        <div className="border-t border-gray-200 pt-3 flex justify-between items-center text-base font-black text-gray-950"><span>Total:</span><span className="text-emerald-800">${total.toFixed(2)}</span></div>
-        <button onClick={revisarPedidoAntesDeConfirmar} disabled={enviando || (carrito.length === 0 && adicionales.length === 0)} className="w-full bg-emerald-700 text-white py-3 rounded-xl font-bold hover:bg-emerald-800 shadow-sm text-sm tracking-wide">
-          {enviando ? 'Procesando...' : idPedidoAEditar ? '💾 Guardar Cambios' : 'Confirmar Pedido'}
-        </button>
+      {/* CARRITO LATERAL EN ESCRITORIO (Visible en md:) */}
+      <div className="hidden md:block">
+        {renderPanelCarrito()}
       </div>
 
       {/* MODAL CENTRAL DE CONFIRMACIÓN */}
@@ -1548,4 +1454,119 @@ export default function ClientMenu() {
 
     </div>
   );
+
+  // Renderizador unificado para el panel de pedido
+  function renderPanelCarrito() {
+    return (
+      <div className="border border-gray-200 rounded-2xl p-5 bg-gray-50 h-fit space-y-4 shadow-sm">
+        <div className="flex items-center space-x-2 border-b border-gray-200 pb-3">
+          <ShoppingCart className="h-5 w-5 text-emerald-800" />
+          <h2 className="text-lg font-bold text-gray-950">Tu Pedido</h2>
+        </div>
+        
+        <div>
+          <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+            {tipoEntrega === 'llevar' ? 'Nombre del Cliente / Identificador' : 'Mesa / Identificador'}
+          </label>
+          {tipoEntrega === 'llevar' ? (
+            <input 
+              type="text" 
+              placeholder="Nombre del Cliente (Ej. Juan Pérez)" 
+              value={mesa} 
+              onChange={(e) => setMesa(e.target.value)} 
+              className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm font-bold" 
+            />
+          ) : (
+            <select
+              value={mesa}
+              onChange={(e) => setMesa(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-700 outline-none text-gray-950 bg-white shadow-sm font-black text-gray-800"
+            >
+              <option value="">Selecciona una Mesa...</option>
+              {Array.from({ length: 35 }, (_, i) => i + 1).map((num) => (
+                <option key={num} value={`${num}`}>{`MESA ${num}`}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="divide-y divide-gray-200/60 max-h-60 overflow-y-auto pr-1">
+          {carrito.length === 0 && adicionales.length === 0 && (
+            <p className="text-gray-400 text-center text-xs py-5 italic">No has agregado elementos.</p>
+          )}
+          {carrito.map((item) => (
+            <div key={item.idUnico} className="py-2.5 flex justify-between items-center">
+              <div className="pr-2">
+                <h4 className="font-bold text-gray-950 text-xs sm:text-sm capitalize">{item.plato.nombre}</h4>
+                {item.detallesPersonalizados && <p className="text-[11px] text-emerald-700 font-medium capitalize mt-0.5">{item.detallesPersonalizados}</p>}
+                <p className="text-xs text-gray-500 mt-0.5 font-mono">${(Number(item.plato.precio) * item.grid).toFixed(2)}</p>
+              </div>
+              <div className="flex items-center space-x-2 bg-white border rounded-xl p-1 shadow-sm shrink-0">
+                <button onClick={() => modificarCantidad(item.idUnico, 'decrementar')} className="p-1 hover:bg-gray-100 rounded-md text-gray-600 transition"><Minus className="h-3 w-3" /></button>
+                <span className="font-bold text-gray-900 text-xs w-4 text-center">{item.grid}</span>
+                <button onClick={() => modificarCantidad(item.idUnico, 'incrementar')} className="p-1 hover:bg-gray-100 rounded-md text-gray-600 transition"><Plus className="h-3 w-3" /></button>
+              </div>
+            </div>
+          ))}
+
+          {/* LISTA DE EXTRAS */}
+          {adicionales.map((adi) => (
+            <div key={adi.id} className="py-2.5 flex justify-between items-center bg-emerald-50/40 px-2 rounded-xl mt-1.5">
+              <div>
+                <h4 className="font-bold text-emerald-900 text-xs capitalize">[Extra] {adi.descripcion}</h4>
+                <p className="text-xs text-emerald-700 mt-0.5 font-mono">${adi.precio.toFixed(2)}</p>
+              </div>
+              <button onClick={() => setAdicionales(adicionales.filter((a) => a.id !== adi.id))} className="p-1 text-gray-400 hover:text-red-600 transition"><Trash2 className="h-3.5 w-3.5" /></button>
+            </div>
+          ))}
+        </div>
+
+        {/* BOTÓN ADICIONALES */}
+        {!mostrarFormAdicional ? (
+          <button type="button" onClick={() => setMostrarFormAdicional(true)} className="w-full border border-dashed border-emerald-300 text-emerald-800 bg-white py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1 hover:bg-emerald-50/30 transition shadow-sm">
+            <PlusCircle className="h-3.5 w-3.5 text-emerald-700" />
+            <span>Agregar Nota o Adicional</span>
+          </button>
+        ) : (
+          <form onSubmit={agregarAdicionalALaLista} className="bg-white p-3 border border-gray-200 rounded-xl space-y-2 shadow-sm">
+            <input type="text" placeholder="Ej. Porción de Maní o Huevo Extra" value={descAdicional} onChange={(e) => setDescAdicional(e.target.value)} className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white" required />
+            <select
+              value={precioAdicional}
+              onChange={(e) => setPrecioAdicional(e.target.value)}
+              className="w-full text-xs border rounded-lg p-2 text-gray-950 outline-none focus:border-emerald-600 bg-white font-bold text-gray-700"
+              required
+            >
+              <option value="">Seleccionar Precio Adicional...</option>
+              <option value="0.50">{"$0.50 Centavos"}</option>
+              <option value="1.00">{"$1.00 Dólar"}</option>
+            </select>
+            <div className="flex gap-2 justify-end text-[11px] font-bold pt-1">
+              <button type="button" onClick={() => setMostrarFormAdicional(false)} className="text-gray-400 hover:text-gray-600">Cancelar</button>
+              <button type="submit" className="px-3 py-1 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition">Añadir</button>
+            </div>
+          </form>
+        )}
+
+        <div className="border-t border-gray-200 pt-3 flex justify-between items-center text-base font-black text-gray-950">
+          <span>Total:</span>
+          <span className="text-emerald-800 font-mono text-lg">${total.toFixed(2)}</span>
+        </div>
+        
+        {/* BOTÓN CONFIRMAR PEDIDO */}
+        <button onClick={revisarPedidoAntesDeConfirmar} disabled={enviando || (carrito.length === 0 && adicionales.length === 0)} className="w-full bg-emerald-700 text-white py-3 rounded-xl font-bold hover:bg-emerald-800 shadow-sm text-sm tracking-wide transition">
+          {enviando ? 'Procesando...' : idPedidoAEditar ? '💾 Guardar Cambios' : 'Confirmar Pedido'}
+        </button>
+
+        {/* 🟢 BOTÓN EDITAR ORDEN (UBICADO DEBAJO DE CONFIRMAR PEDIDO) */}
+        <button 
+          type="button"
+          onClick={abrirModalEditarOrden}
+          className="w-full bg-amber-50 border border-amber-200 text-amber-900 hover:bg-amber-100/80 py-2.5 rounded-xl text-xs font-extrabold shadow-sm transition flex items-center justify-center gap-1.5"
+        >
+          <Edit3 className="h-3.5 w-3.5 text-amber-700" />
+          <span>Editar Orden Existente</span>
+        </button>
+      </div>
+    );
+  }
 }
