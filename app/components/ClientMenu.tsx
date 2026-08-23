@@ -633,9 +633,24 @@ export default function ClientMenu() {
     .sort((a, b) => {
       const nameA = a.nombre.toLowerCase();
       const nameB = b.nombre.toLowerCase();
-      if (nameA.includes('tonga')) return -1;
-      if (nameB.includes('tonga')) return 1;
-      return 0;
+
+      // Función para asignar prioridad en la parte superior
+      const obtenerPrioridad = (nombre: string) => {
+        if (nombre.includes('tonga')) return 1;
+        if (nombre.includes('seco criollo')) return 2;
+        if (nombre.includes('hornado') || nombre.includes('horneado')) return 3;
+        if (nombre.includes('caldo criollo')) return 4;
+        return 5; // El resto de platos y bebidas comerciales van al final
+      };
+
+      const prioridadA = obtenerPrioridad(nameA);
+      const prioridadB = obtenerPrioridad(nameB);
+
+      if (prioridadA !== prioridadB) {
+        return prioridadA - prioridadB;
+      }
+
+      return nameA.localeCompare(nameB);
     });
 
   if (cajaCerradaHoy) {
