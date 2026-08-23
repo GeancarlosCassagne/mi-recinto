@@ -71,7 +71,7 @@ export default function ClientMenu() {
 
   const [configurandoAlmuerzo, setConfigurandoAlmuerzo] = useState(false);
   const [almuerzoSeleccionado, setAlmuerzoSeleccionado] = useState<Plato | null>(null);
-  const [pasoAlmuerzo, setPasoAlmuerzo] = useState<'tipo' | 'segundo' | 'caldo' | 'bebida'>('tipo');
+  const [pasoAlmuerzo, setPasoAlmuerzo] = useState<'tipo' | 'segundo' | 'presa_segundo' | 'caldo' | 'bebida'>('tipo');
   const [tipoAlmuerzo, setTipoAlmuerzo] = useState<'completo' | 'segundo' | 'caldo'>('completo');
   const [sopaElegida, setSopaElegida] = useState<string>('');
   const [almuerzoPrecio, setAlmuerzoPrecio] = useState<number>(3.00);
@@ -117,13 +117,12 @@ export default function ClientMenu() {
       .select('id, nombre, precio, disponible, categoria')
       .order('nombre', { ascending: true });
 
-    // 3. Buscar los platos establecidos en el menú diario para hoy
+    // 3. Buscar los platos establecidos en el menú diario
     let { data: datosMenuDiario } = await supabase
       .from('menu_diario')
       .select('plato_id, fecha')
       .eq('fecha', hoy);
 
-    // Si por desfase de zona horaria no hay registros exactos de hoy, toma los más recientes del menú diario
     if (!datosMenuDiario || datosMenuDiario.length === 0) {
       const { data: ultimoMenu } = await supabase
         .from('menu_diario')
@@ -143,7 +142,7 @@ export default function ClientMenu() {
       const platosFiltrados = todosLosPlatos.filter((plato) => {
         const nombreLimpio = plato.nombre.toLowerCase();
         
-        // Elementos fijos y estructurales que siempre deben existir en memoria
+        // Elementos fijos y estructurales que siempre existen
         const esComponenteEstructural = 
           plato.categoria === 'presa_criolla' ||
           plato.categoria === 'presa_granja' ||
@@ -153,9 +152,9 @@ export default function ClientMenu() {
           nombreLimpio.includes('almuerzo del día') ||
           nombreLimpio.includes('tonga') ||
           nombreLimpio.includes('hornado') ||
+          nombreLimpio.includes('horneado') ||
           nombreLimpio.includes('seco criollo');
 
-        // Los Segundos, Caldos y Jugos SOLO pasan si fueron marcados en el Admin (menu_diario)
         return esComponenteEstructural || idsAsignados.includes(plato.id);
       });
 
@@ -272,14 +271,14 @@ export default function ClientMenu() {
       setPasoTonga('presa');
       setTipoGallina('Criolla');
     } 
-    // 3. Pollo Hornado / Horneado: Directo a presas de Granja
+    // 3. Pollo Hornado / Horneado Fijo: Directo a presas de Granja
     else if (nombreLimpio.includes('hornado') || nombreLimpio.includes('horneado')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Granja');
     } 
-    // 4. Caldo Criollo / Caldos fijos: Directo a presas exclusivas de Caldo
+    // 4. Caldo Criollo: Directo a presas exclusivas de Caldo
     else if (nombreLimpio.includes('caldo criollo')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
@@ -332,7 +331,6 @@ export default function ClientMenu() {
       }
     }
 
-    // 🟢 Si es Tonga, incluye explícitamente "Criolla" o "Granja" en los detalles
     const prefijoTipo = esTonga && tipoGallina ? `${tipoGallina} ` : '';
     const detalles = `(${prefijoTipo}${presa})${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
     const idUnico = `${tongaSeleccionada.id}-${detalles.replace(/\s+/g, '-')}`;
@@ -370,6 +368,34 @@ export default function ClientMenu() {
       setPasoAlmuerzo('caldo');
     } else {
       setPasoAlmuerzo('segundo');
+    }
+  };
+
+  // 🟢 Manejador de selección de segundo en almuerzos
+  const seleccionarSegundoAlmuerzo = (nombreSegundo: string) => {
+    const esHornado = nombreSegundo.toLowerCase().includes('hornado') || nombreSegundo.toLowerCase().includes('horneado');
+    
+    if (esHornado) {
+      // Abre el selector de presas de granja
+      setSegundoElegido(nombreSegundo);
+      setPasoAlmuerzo('presa_segundo');
+    } else {
+      setSegundoElegido(nombreSegundo);
+      if (tipoAlmuerzo === 'completo') {
+        setPasoAlmuerzo('caldo');
+      } else {
+        setPasoAlmuerzo('bebida');
+      }
+    }
+  };
+
+  // 🟢 Confirma la presa elegida para el Pollo Hornado dentro del almuerzo
+  const confirmarPresaSegundoAlmuerzo = (presa: string) => {
+    setSegundoElegido(`Pollo Hornado (${presa})`);
+    if (tipoAlmuerzo === 'completo') {
+      setPasoAlmuerzo('caldo');
+    } else {
+      setPasoAlmuerzo('bebida');
     }
   };
 
@@ -550,8 +576,12 @@ export default function ClientMenu() {
     }
   };
 
-  // Solo muestra los segundos y caldos seleccionados para hoy en el menú diario
-  const opcionesSegundos = platos.filter(p => p.categoria === 'segundo');
+  // 🟢 Asegura que Pollo Hornado siempre esté en las opciones de segundo además de los del menú diario
+  const opcionesSegundos = [
+    ...platos.filter(p => p.categoria === 'segundo'),
+    ...platos.filter(p => (p.nombre.toLowerCase().includes('hornado') || p.nombre.toLowerCase().includes('horneado')) && p.categoria !== 'segundo')
+  ].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
 
   const opcionesBebidas = platos.filter(p => {
@@ -622,8 +652,6 @@ export default function ClientMenu() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-8 relative text-gray-900 bg-white">
-      
-      
 
       {/* BANNER SELECCIÓN DE MESERA */}
       <div className="md:col-span-3 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
@@ -738,14 +766,7 @@ export default function ClientMenu() {
                       <button 
                         key={s.id} 
                         disabled={!s.disponible}
-                        onClick={() => { 
-                          setSegundoElegido(s.nombre);
-                          if (tipoAlmuerzo === 'completo') { 
-                            setPasoAlmuerzo('caldo'); 
-                          } else { 
-                            setPasoAlmuerzo('bebida');
-                          } 
-                        }} 
+                        onClick={() => seleccionarSegundoAlmuerzo(s.nombre)} 
                         className={`p-3 border rounded-xl font-semibold text-left text-xs uppercase flex justify-between items-center shadow-sm transition-all ${
                           s.disponible 
                             ? 'bg-white text-gray-900 hover:bg-emerald-50/50' 
@@ -760,6 +781,41 @@ export default function ClientMenu() {
                       </button>
                     ))
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* 🟢 SUBPASO DE SELECCIÓN DE PRESA PARA POLLO HORNADO EN ALMUERZOS */}
+            {pasoAlmuerzo === 'presa_segundo' && (
+              <div>
+                <p className="text-xs font-bold text-emerald-800 uppercase mb-1">2.1 Selecciona la presa para el Pollo Hornado:</p>
+                <p className="text-[11px] text-gray-500 mb-3">Presas de Granja vinculadas a la disponibilidad del día</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {platos.filter(p => p.categoria === 'presa_granja').map((p) => {
+                    const nombreLimpioPresa = p.nombre
+                      .replace(' Granja', '')
+                      .replace(' Criolla', '')
+                      .replace(' Caldo', '')
+                      .replace(' (Palizada)', '');
+
+                    return (
+                      <button 
+                        key={p.id} 
+                        disabled={!p.disponible}
+                        onClick={() => confirmarPresaSegundoAlmuerzo(nombreLimpioPresa)} 
+                        className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
+                          p.disponible 
+                            ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                        }`}
+                      >
+                        <span className="flex flex-col items-center justify-center gap-1">
+                          <span>{nombreLimpioPresa}</span>
+                          {!p.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase block">Agotado</span>}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
