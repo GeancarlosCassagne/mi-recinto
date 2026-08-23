@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { CheckCircle, Clock, User, Bike, UtensilsCrossed, AlertCircle, AlertTriangle, Lock, Trash2, DollarSign, Utensils, Soup, Drumstick, Coffee } from 'lucide-react';
+import { CheckCircle, Clock, User, Bike, UtensilsCrossed, AlertCircle, AlertTriangle, Lock, Trash2, DollarSign, Utensils, Soup, Drumstick, Coffee, Tag } from 'lucide-react';
 
 interface DetallePedido {
   cantidad: number;
@@ -206,14 +206,14 @@ export default function CocinaPage() {
     let titulo = texto;
     let componentes: string[] = [];
 
-    // 1. Limpieza de prefijos y dobles paréntesis redundantes
+    // Limpieza de prefijos y dobles paréntesis redundantes
     let textoLimpio = texto
       .replace(/Almuerzo Del Día/gi, '')
       .replace(/\(\(/g, '(')
       .replace(/\)\)/g, ')')
       .trim();
 
-    // 2. Extracción precisa de componentes del almuerzo
+    // Extracción precisa de componentes del almuerzo
     const regexAlmuerzo = /\((Completo|Solo Segundo|Solo Caldo):\s*(.*?)\)$/i;
     const match = textoLimpio.match(regexAlmuerzo);
 
@@ -221,7 +221,6 @@ export default function CocinaPage() {
       const tipo = match[1].toLowerCase();
       titulo = tipo === 'completo' ? 'Almuerzo Completo' : tipo === 'solo segundo' ? 'Solo Segundo' : 'Solo Caldo';
       
-      // Separamos por '+' sin romper los paréntesis internos de las presas
       componentes = match[2]
         .split('+')
         .map(s => s.trim())
@@ -367,19 +366,19 @@ export default function CocinaPage() {
                     </div>
                   </div>
 
-                  {/* CUERPO CON SECCIONES SEPARADAS */}
+                  {/* CUERPO CON CASILLEROS DE COLORES DIFERENCIADOS */}
                   <div className="p-4 space-y-3.5">
 
-                    {/* 1. ALMUERZOS COMPLETOS */}
+                    {/* 1. CASILLERO VERDE ESMERALDA: ALMUERZOS COMPLETOS */}
                     {completos.length > 0 && (
-                      <div className="space-y-1.5 bg-emerald-950/20 border border-emerald-800/40 p-2.5 rounded-2xl">
-                        <div className="flex items-center gap-1.5 text-emerald-400 font-black text-[11px] uppercase tracking-wider border-b border-emerald-800/40 pb-1">
-                          <Utensils className="h-3.5 w-3.5" />
+                      <div className="space-y-1.5 bg-emerald-950/30 border border-emerald-700/60 p-2.5 rounded-2xl shadow-sm">
+                        <div className="flex items-center gap-1.5 text-emerald-300 font-black text-[11px] uppercase tracking-wider border-b border-emerald-700/50 pb-1">
+                          <Utensils className="h-3.5 w-3.5 text-emerald-400" />
                           <span>Almuerzos Completos</span>
                         </div>
                         <div className="space-y-1.5 pt-1">
                           {completos.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-start text-xs bg-slate-900/90 border border-emerald-500/30 p-2 rounded-xl text-slate-100 shadow-sm gap-2">
+                            <div key={idx} className="flex justify-between items-start text-xs bg-emerald-950/70 border border-emerald-600/40 p-2.5 rounded-xl text-slate-100 shadow-sm gap-2">
                               <div className="flex items-start gap-2 min-w-0 flex-1">
                                 <span className="bg-emerald-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
                                   {item.cantidad}
@@ -397,16 +396,16 @@ export default function CocinaPage() {
                       </div>
                     )}
 
-                    {/* 2. SOLO SEGUNDOS / FUERTES / TONGAS */}
+                    {/* 2. CASILLERO ÁMBAR / CÁLIDO: SEGUNDOS, FUERTES Y TONGAS */}
                     {segundos.length > 0 && (
-                      <div className="space-y-1.5 bg-amber-950/20 border border-amber-800/40 p-2.5 rounded-2xl">
-                        <div className="flex items-center gap-1.5 text-amber-400 font-black text-[11px] uppercase tracking-wider border-b border-amber-800/40 pb-1">
-                          <Drumstick className="h-3.5 w-3.5" />
+                      <div className="space-y-1.5 bg-amber-950/30 border border-amber-700/60 p-2.5 rounded-2xl shadow-sm">
+                        <div className="flex items-center gap-1.5 text-amber-300 font-black text-[11px] uppercase tracking-wider border-b border-amber-700/50 pb-1">
+                          <Drumstick className="h-3.5 w-3.5 text-amber-400" />
                           <span>Solo Segundos / Fuertes / Tongas</span>
                         </div>
                         <div className="space-y-1.5 pt-1">
                           {segundos.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-start text-xs bg-slate-900/90 border border-amber-500/30 p-2 rounded-xl text-slate-100 shadow-sm gap-2">
+                            <div key={idx} className="flex justify-between items-start text-xs bg-amber-950/70 border border-amber-600/40 p-2.5 rounded-xl text-slate-100 shadow-sm gap-2">
                               <div className="flex items-start gap-2 min-w-0 flex-1">
                                 <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
                                   {item.cantidad}
@@ -424,24 +423,24 @@ export default function CocinaPage() {
                       </div>
                     )}
 
-                    {/* 3. SOLO CALDOS / SOPAS */}
+                    {/* 3. CASILLERO AZUL / CYAN: CALDOS Y SOPAS */}
                     {caldos.length > 0 && (
-                      <div className="space-y-1.5 bg-blue-950/20 border border-blue-800/40 p-2.5 rounded-2xl">
-                        <div className="flex items-center gap-1.5 text-blue-400 font-black text-[11px] uppercase tracking-wider border-b border-blue-800/40 pb-1">
-                          <Soup className="h-3.5 w-3.5" />
+                      <div className="space-y-1.5 bg-blue-950/30 border border-blue-700/60 p-2.5 rounded-2xl shadow-sm">
+                        <div className="flex items-center gap-1.5 text-cyan-300 font-black text-[11px] uppercase tracking-wider border-b border-blue-700/50 pb-1">
+                          <Soup className="h-3.5 w-3.5 text-cyan-400" />
                           <span>Solo Caldos / Sopas</span>
                         </div>
                         <div className="space-y-1.5 pt-1">
                           {caldos.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-start text-xs bg-slate-900/90 border border-blue-500/30 p-2 rounded-xl text-slate-100 shadow-sm gap-2">
+                            <div key={idx} className="flex justify-between items-start text-xs bg-blue-950/70 border border-blue-600/40 p-2.5 rounded-xl text-slate-100 shadow-sm gap-2">
                               <div className="flex items-start gap-2 min-w-0 flex-1">
-                                <span className="bg-blue-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
+                                <span className="bg-cyan-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
                                   {item.cantidad}
                                 </span>
                                 {renderItemTextoLimpio(item.texto)}
                               </div>
                               {item.precio > 0 && (
-                                <span className="font-mono font-black text-xs text-blue-300 shrink-0 mt-0.5">
+                                <span className="font-mono font-black text-xs text-cyan-300 shrink-0 mt-0.5">
                                   ${item.precio.toFixed(2)}
                                 </span>
                               )}
@@ -451,20 +450,20 @@ export default function CocinaPage() {
                       </div>
                     )}
 
-                    {/* 4. BEBIDAS / EXTRAS SUELTOS */}
+                    {/* 4. CASILLERO VIOLETA / PIZARRA: BEBIDAS Y EXTRAS */}
                     {bebidasYExtras.length > 0 && (
-                      <div className="space-y-1.5 bg-slate-900/40 border border-slate-700/60 p-2.5 rounded-2xl">
-                        <div className="flex items-center gap-1.5 text-slate-400 font-black text-[11px] uppercase tracking-wider border-b border-slate-700/60 pb-1">
-                          <Coffee className="h-3.5 w-3.5" />
+                      <div className="space-y-1.5 bg-purple-950/30 border border-purple-700/60 p-2.5 rounded-2xl shadow-sm">
+                        <div className="flex items-center gap-1.5 text-purple-300 font-black text-[11px] uppercase tracking-wider border-b border-purple-700/50 pb-1">
+                          <Coffee className="h-3.5 w-3.5 text-purple-400" />
                           <span>Bebidas / Extras Sueltos</span>
                         </div>
                         <div className="space-y-1.5 pt-1">
                           {bebidasYExtras.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/80 p-2 rounded-xl border border-slate-700/40">
-                              <span className="font-bold capitalize text-slate-300">• {item.texto}</span>
+                            <div key={idx} className="flex justify-between items-center text-xs bg-purple-950/70 border border-purple-600/40 p-2.5 rounded-xl shadow-sm">
+                              <span className="font-bold capitalize text-slate-200">• {item.texto}</span>
                               <div className="flex items-center gap-2">
-                                <span className="bg-slate-800 text-slate-400 font-bold px-2 py-0.5 rounded-md">{item.cantidad}</span>
-                                <span className="font-mono font-black text-xs text-slate-400">${item.precio.toFixed(2)}</span>
+                                <span className="bg-purple-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px]">{item.cantidad}</span>
+                                <span className="font-mono font-black text-xs text-purple-300">${item.precio.toFixed(2)}</span>
                               </div>
                             </div>
                           ))}
@@ -472,19 +471,28 @@ export default function CocinaPage() {
                       </div>
                     )}
 
-                    {/* ADICIONALES ESCRITOS */}
+                    {/* 🟢 CASILLERO DE ADICIONALES (CON PALABRA "ADICIONAL:" EN LUGAR DE "+") */}
                     {adicionales && adicionales.length > 0 && (
-                      <div className="space-y-1">
-                        {adicionales.map((item, index) => (
-                          <div key={index} className="bg-sky-950/40 border border-sky-900/40 p-2 rounded-xl text-xs font-bold text-sky-300 capitalize">
-                            ➕ {item}
-                          </div>
-                        ))}
+                      <div className="space-y-1.5 bg-rose-950/30 border border-rose-800/60 p-2.5 rounded-2xl shadow-sm">
+                        <div className="flex items-center gap-1.5 text-rose-300 font-black text-[11px] uppercase tracking-wider border-b border-rose-800/50 pb-1">
+                          <Tag className="h-3.5 w-3.5 text-rose-400" />
+                          <span>Notas y Adicionales del Pedido</span>
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          {adicionales.map((item, index) => (
+                            <div key={index} className="bg-rose-950/70 border border-rose-700/40 p-2.5 rounded-xl text-xs font-bold text-rose-200 capitalize flex items-center gap-2 shadow-sm">
+                              <span className="bg-rose-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0">
+                                Adicional:
+                              </span>
+                              <span className="truncate">{item}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
                     {/* TOTAL */}
-                    <div className="mt-2 pt-2 border-t border-slate-700/80 flex justify-between items-center bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/40">
+                    <div className="mt-2 pt-2 border-t border-slate-700/80 flex justify-between items-center bg-slate-900/80 p-2.5 rounded-xl border border-slate-700/60">
                       <span className="text-xs font-black uppercase tracking-wider text-slate-400">Total a Cobrar:</span>
                       <span className="text-base font-black text-emerald-400 font-mono flex items-center">
                         <DollarSign className="h-4 w-4" />{Number(p.total).toFixed(2)}
