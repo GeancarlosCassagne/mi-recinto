@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { CheckCircle, Clock, User, Bike, UtensilsCrossed, AlertCircle, AlertTriangle, Lock, Trash2, DollarSign } from 'lucide-react';
+import { CheckCircle, Clock, User, Bike, UtensilsCrossed, AlertCircle, AlertTriangle, Lock, Trash2, DollarSign, Utensils, Soup, Drumstick, Coffee } from 'lucide-react';
 
 interface DetallePedido {
   cantidad: number;
@@ -139,6 +139,72 @@ export default function CocinaPage() {
     return { numeroMesa: rawMesa, esParaLlevar, mesera, especificaciones, adicionales };
   };
 
+  // 🟢 Clasificador de ítems para ordenar visualmente la comanda
+  const clasificarItemsComanda = (especificaciones: string[], detalles: DetallePedido[]) => {
+    const completos: { texto: string; cantidad: string; precio: number }[] = [];
+    const segundos: { texto: string; cantidad: string; precio: number }[] = [];
+    const caldos: { texto: string; cantidad: string; precio: number }[] = [];
+    const bebidasYExtras: { texto: string; cantidad: string; precio: number }[] = [];
+
+    if (especificaciones.length > 0) {
+      especificaciones.forEach(item => {
+        const partes = item.trim().split(/\s+(.+)/);
+        const tieneCantidad = partes[0] && partes[0].match(/^\d+x$/i);
+        const cantidad = tieneCantidad ? partes[0].toUpperCase() : '1X';
+        const textoDetalle = tieneCantidad ? partes[1] : item;
+
+        const detCoincidente = detalles?.find(d => textoDetalle.toLowerCase().includes(d.platos?.nombre.toLowerCase()));
+        const precioUnit = Number(detCoincidente?.precio_unitario || detCoincidente?.platos?.precio || 0);
+        const itemObj = { texto: textoDetalle, cantidad, precio: precioUnit };
+
+        const textoMin = textoDetalle.toLowerCase();
+
+        if (textoMin.includes('completo:')) {
+          completos.push(itemObj);
+        } else if (textoMin.includes('solo segundo:') || textoMin.includes('tonga') || textoMin.includes('seco criollo') || textoMin.includes('hornado')) {
+          segundos.push(itemObj);
+        } else if (textoMin.includes('solo caldo:') || textoMin.includes('caldo')) {
+          caldos.push(itemObj);
+        } else {
+          segundos.push(itemObj);
+        }
+      });
+
+      // Productos sueltos como jugos, colas y aguas extras
+      detalles?.filter(d => {
+        const n = d.platos?.nombre.toLowerCase();
+        return !n.includes('tonga') && !n.includes('almuerzo') && !n.includes('hornado') && !n.includes('criollo');
+      }).forEach(d => {
+        bebidasYExtras.push({
+          texto: d.platos?.nombre,
+          cantidad: `x${d.cantidad}`,
+          precio: Number(d.precio_unitario) * d.cantidad
+        });
+      });
+
+    } else {
+      // Si el pedido no tiene especificaciones estructuradas
+      detalles?.forEach(d => {
+        const n = d.platos?.nombre.toLowerCase();
+        const itemObj = {
+          texto: d.platos?.nombre,
+          cantidad: `x${d.cantidad}`,
+          precio: Number(d.precio_unitario || d.platos?.precio || 0) * d.cantidad
+        };
+
+        if (n.includes('caldo') || n.includes('sopa')) {
+          caldos.push(itemObj);
+        } else if (n.includes('jugo') || n.includes('cola') || n.includes('agua') || n.includes('bebida') || n.includes('chicha') || n.includes('quaker')) {
+          bebidasYExtras.push(itemObj);
+        } else {
+          segundos.push(itemObj);
+        }
+      });
+    }
+
+    return { completos, segundos, caldos, bebidasYExtras };
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-white p-6 w-full relative">
 
@@ -186,7 +252,7 @@ export default function CocinaPage() {
 
       <header className="border-b border-slate-800 pb-4 mb-6 flex justify-between items-center max-w-7xl mx-auto">
         <h1 className="text-2xl font-black tracking-tight text-slate-100 flex items-center gap-2">
-          🍳 Monitor de Cocina <span className="text-emerald-400 font-medium text-sm bg-emerald-950/60 px-3 py-1 rounded-xl border border-emerald-900/50">Flujo General Diario</span>
+          🍳 Monitor de Cocina <span className="text-emerald-400 font-medium text-sm bg-emerald-950/60 px-3 py-1 rounded-xl border border-emerald-900/50">Flujo Separado</span>
         </h1>
         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Órdenes Sincronizadas</p>
       </header>
@@ -200,6 +266,7 @@ export default function CocinaPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           {pedidos.map((p) => {
             const { numeroMesa, esParaLlevar, mesera, especificaciones, adicionales } = desglosarCabeceraPedido(p.mesa);
+            const { completos, segundos, caldos, bebidasYExtras } = clasificarItemsComanda(especificaciones, p.detalles_pedido);
             const hora = new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const estaDespachado = p.estado === 'entregado';
 
@@ -255,77 +322,120 @@ export default function CocinaPage() {
                     </div>
                   </div>
 
-                  {/* CUERPO COMPACTO Y UNIFICADO */}
-                  <div className="p-4 space-y-2.5">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Composición de la Orden:</p>
-                    
-                    <div className="space-y-2">
-                      {especificaciones.length > 0 ? (
-                        especificaciones.map((item, idx) => {
-                          const partes = item.trim().split(/\s+(.+)/);
-                          const tieneCantidad = partes[0] && partes[0].match(/^\d+x$/i);
-                          const cantidad = tieneCantidad ? partes[0].toUpperCase() : '1X';
-                          const textoDetalle = tieneCantidad ? partes[1] : item;
+                  {/* CUERPO CON SECCIONES SEPARADAS */}
+                  <div className="p-4 space-y-3.5">
 
-                          const detCoincidente = p.detalles_pedido?.find(d => textoDetalle.toLowerCase().includes(d.platos?.nombre.toLowerCase()));
-                          const precioUnit = Number(detCoincidente?.precio_unitario || detCoincidente?.platos?.precio || 0);
-
-                          return (
-                            <div key={idx} className="flex justify-between items-start text-xs bg-slate-900/90 border border-amber-500/30 p-2.5 rounded-xl text-slate-100 shadow-sm gap-2">
+                    {/* 1. BLOQUE DE ALMUERZOS COMPLETOS */}
+                    {completos.length > 0 && (
+                      <div className="space-y-1.5 bg-emerald-950/20 border border-emerald-800/40 p-2.5 rounded-2xl">
+                        <div className="flex items-center gap-1.5 text-emerald-400 font-black text-[11px] uppercase tracking-wider border-b border-emerald-800/40 pb-1">
+                          <Utensils className="h-3.5 w-3.5" />
+                          <span>Almuerzos Completos</span>
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          {completos.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-start text-xs bg-slate-900/90 border border-emerald-500/30 p-2 rounded-xl text-slate-100 shadow-sm gap-2">
                               <div className="flex items-start gap-2 min-w-0 flex-1">
-                                <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
-                                  {cantidad}
+                                <span className="bg-emerald-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
+                                  {item.cantidad}
                                 </span>
                                 <span className="font-bold capitalize leading-snug break-words whitespace-normal flex-1">
-                                  {textoDetalle}
+                                  {item.texto}
                                 </span>
                               </div>
-                              {precioUnit > 0 && (
-                                <span className="font-mono font-black text-xs text-amber-300 shrink-0 mt-0.5">
-                                  ${precioUnit.toFixed(2)}
+                              {item.precio > 0 && (
+                                <span className="font-mono font-black text-xs text-emerald-300 shrink-0 mt-0.5">
+                                  ${item.precio.toFixed(2)}
                                 </span>
                               )}
                             </div>
-                          );
-                        })
-                      ) : (
-                        p.detalles_pedido?.map((det, idx) => {
-                          const precioUnit = Number(det.precio_unitario || det.platos?.precio || 0);
-                          return (
-                            <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/70 p-2.5 border border-slate-700/50 rounded-xl">
-                              <span className="font-bold capitalize text-slate-200">
-                                • {det.platos?.nombre}
-                              </span>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-md">
-                                  x{det.cantidad}
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 2. BLOQUE DE SEGUNDOS, TONGAS Y PLATOS FUERTES */}
+                    {segundos.length > 0 && (
+                      <div className="space-y-1.5 bg-amber-950/20 border border-amber-800/40 p-2.5 rounded-2xl">
+                        <div className="flex items-center gap-1.5 text-amber-400 font-black text-[11px] uppercase tracking-wider border-b border-amber-800/40 pb-1">
+                          <Drumstick className="h-3.5 w-3.5" />
+                          <span>Solo Segundos / Fuertes / Tongas</span>
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          {segundos.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-start text-xs bg-slate-900/90 border border-amber-500/30 p-2 rounded-xl text-slate-100 shadow-sm gap-2">
+                              <div className="flex items-start gap-2 min-w-0 flex-1">
+                                <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
+                                  {item.cantidad}
                                 </span>
-                                <span className="font-mono font-black text-slate-300">
-                                  ${(precioUnit * det.cantidad).toFixed(2)}
+                                <span className="font-bold capitalize leading-snug break-words whitespace-normal flex-1">
+                                  {item.texto}
                                 </span>
                               </div>
+                              {item.precio > 0 && (
+                                <span className="font-mono font-black text-xs text-amber-300 shrink-0 mt-0.5">
+                                  ${item.precio.toFixed(2)}
+                                </span>
+                              )}
                             </div>
-                          );
-                        })
-                      )}
-
-                      {/* Bebidas y productos sueltos */}
-                      {especificaciones.length > 0 && p.detalles_pedido?.filter(d => {
-                        const n = d.platos?.nombre.toLowerCase();
-                        return !n.includes('tonga') && !n.includes('almuerzo') && !n.includes('hornado') && !n.includes('criollo');
-                      }).map((detExtra, i) => (
-                        <div key={i} className="flex justify-between items-center text-xs bg-slate-900/50 p-2 rounded-xl border border-slate-700/30">
-                          <span className="font-bold capitalize text-slate-300">• {detExtra.platos?.nombre}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="bg-slate-800 text-slate-400 font-bold px-2 py-0.5 rounded-md">x{detExtra.cantidad}</span>
-                            <span className="font-mono font-black text-xs text-slate-400">${(Number(detExtra.precio_unitario) * detExtra.cantidad).toFixed(2)}</span>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
 
+                    {/* 3. BLOQUE DE CALDOS Y SOPAS */}
+                    {caldos.length > 0 && (
+                      <div className="space-y-1.5 bg-blue-950/20 border border-blue-800/40 p-2.5 rounded-2xl">
+                        <div className="flex items-center gap-1.5 text-blue-400 font-black text-[11px] uppercase tracking-wider border-b border-blue-800/40 pb-1">
+                          <Soup className="h-3.5 w-3.5" />
+                          <span>Solo Caldos / Sopas</span>
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          {caldos.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-start text-xs bg-slate-900/90 border border-blue-500/30 p-2 rounded-xl text-slate-100 shadow-sm gap-2">
+                              <div className="flex items-start gap-2 min-w-0 flex-1">
+                                <span className="bg-blue-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
+                                  {item.cantidad}
+                                </span>
+                                <span className="font-bold capitalize leading-snug break-words whitespace-normal flex-1">
+                                  {item.texto}
+                                </span>
+                              </div>
+                              {item.precio > 0 && (
+                                <span className="font-mono font-black text-xs text-blue-300 shrink-0 mt-0.5">
+                                  ${item.precio.toFixed(2)}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 4. BLOQUE DE BEBIDAS Y EXTRAS */}
+                    {bebidasYExtras.length > 0 && (
+                      <div className="space-y-1.5 bg-slate-900/40 border border-slate-700/60 p-2.5 rounded-2xl">
+                        <div className="flex items-center gap-1.5 text-slate-400 font-black text-[11px] uppercase tracking-wider border-b border-slate-700/60 pb-1">
+                          <Coffee className="h-3.5 w-3.5" />
+                          <span>Bebidas / Extras Sueltos</span>
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          {bebidasYExtras.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/80 p-2 rounded-xl border border-slate-700/40">
+                              <span className="font-bold capitalize text-slate-300">• {item.texto}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="bg-slate-800 text-slate-400 font-bold px-2 py-0.5 rounded-md">{item.cantidad}</span>
+                                <span className="font-mono font-black text-xs text-slate-400">${item.precio.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ADICIONALES ESCRITOS */}
                     {adicionales && adicionales.length > 0 && (
-                      <div className="mt-2 space-y-1">
+                      <div className="space-y-1">
                         {adicionales.map((item, index) => (
                           <div key={index} className="bg-sky-950/40 border border-sky-900/40 p-2 rounded-xl text-xs font-bold text-sky-300 capitalize">
                             ➕ {item}
@@ -341,6 +451,7 @@ export default function CocinaPage() {
                         <DollarSign className="h-4 w-4" />{Number(p.total).toFixed(2)}
                       </span>
                     </div>
+
                   </div>
                 </div>
 
@@ -354,7 +465,7 @@ export default function CocinaPage() {
                   ) : (
                     <button 
                       onClick={() => setPedidoAConfirmar(p)}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase py-3 rounded-xl transition flex items-center justify-center gap-1.5 tracking-wider shadow-md focus:outline-none"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase py-3.5 rounded-xl transition flex items-center justify-center gap-1.5 tracking-wider shadow-md focus:outline-none"
                     >
                       <CheckCircle className="h-4 w-4 stroke-[3]" />
                       <span>Despachar Pedido</span>
