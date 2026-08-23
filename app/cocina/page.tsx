@@ -207,18 +207,21 @@ export default function CocinaPage() {
     let titulo = texto;
     let componentes: string[] = [];
 
+    // Limpiamos cualquier rastro de la frase redundante antes de procesar
+    const textoSanitizado = texto.replace(/Almuerzo Del Día/gi, '').trim();
+
     if (texto.includes('(Completo:')) {
       titulo = 'Almuerzo Completo';
-      const partes = texto.replace('Almuerzo Del Día', '').replace('(Completo:', '').replace(')', '').trim();
-      componentes = partes.split('+').map(s => s.trim()).filter(Boolean);
+      const partes = textoSanitizado.replace('(Completo:', '').replace(')', '').trim();
+      componentes = partes.split('+').map(s => s.trim().replace(/Almuerzo Del Día/gi, '').trim()).filter(Boolean);
     } else if (texto.includes('(Solo Segundo:')) {
       titulo = 'Solo Segundo';
-      const partes = texto.replace('Almuerzo Del Día', '').replace('(Solo Segundo:', '').replace(')', '').trim();
-      componentes = partes.split('+').map(s => s.trim()).filter(Boolean);
+      const partes = textoSanitizado.replace('(Solo Segundo:', '').replace(')', '').trim();
+      componentes = partes.split('+').map(s => s.trim().replace(/Almuerzo Del Día/gi, '').trim()).filter(Boolean);
     } else if (texto.includes('(Solo Caldo:')) {
       titulo = 'Solo Caldo';
-      const partes = texto.replace('Almuerzo Del Día', '').replace('(Solo Caldo:', '').replace(')', '').trim();
-      componentes = partes.split('+').map(s => s.trim()).filter(Boolean);
+      const partes = textoSanitizado.replace('(Solo Caldo:', '').replace(')', '').trim();
+      componentes = partes.split('+').map(s => s.trim().replace(/Almuerzo Del Día/gi, '').trim()).filter(Boolean);
     }
 
     return (
@@ -237,13 +240,12 @@ export default function CocinaPage() {
           </div>
         ) : (
           <p className="text-[11px] font-medium text-slate-300 capitalize">
-            {texto}
+            {textoSanitizado || texto}
           </p>
         )}
       </div>
     );
   };
-
   return (
     <div className="min-h-screen bg-slate-950 text-white p-6 w-full relative">
 
