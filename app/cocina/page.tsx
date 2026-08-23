@@ -229,6 +229,7 @@ export default function CocinaPage() {
   };
 
   // 🟢 Renderizado con soporte para tachar individualmente
+  // 🟢 Renderizado con tachado en bloque (al tocar el título o la tarjeta se tacha todo el almuerzo completo)
   const renderItemTextoLimpio = (texto: string, pedidoId: string, idxGeneral: number | string) => {
     let titulo = texto;
     let componentes: string[] = [];
@@ -254,41 +255,34 @@ export default function CocinaPage() {
       titulo = textoLimpio;
     }
 
-    const claveTitulo = `${pedidoId}-tit-${idxGeneral}`;
-    const estaTachadoTitulo = !!tachados[claveTitulo];
+    const claveBloque = `${pedidoId}-bloque-${idxGeneral}`;
+    const estaTachadoBloque = !!tachados[claveBloque];
 
     return (
-      <div className="flex-1 min-w-0">
-        <p 
-          onClick={() => alternarTachado(claveTitulo)}
-          className={`font-extrabold text-xs capitalize leading-tight cursor-pointer select-none transition-all ${
-            estaTachadoTitulo ? 'line-through text-slate-500 opacity-50' : 'text-white hover:text-emerald-300'
-          }`}
-          title="Click para tachar / destachar"
-        >
+      <div 
+        onClick={() => alternarTachado(claveBloque)}
+        className="flex-1 min-w-0 cursor-pointer select-none"
+        title="Toca para tachar / destachar todo el almuerzo"
+      >
+        <p className={`font-extrabold text-xs capitalize leading-tight transition-all ${
+          estaTachadoBloque ? 'line-through text-slate-500 opacity-50' : 'text-white hover:text-emerald-300'
+        }`}>
           {titulo}
         </p>
 
         {componentes.length > 0 && (
           <div className="mt-1 space-y-0.5 pl-1 border-l-2 border-slate-700">
-            {componentes.map((comp, i) => {
-              const claveComp = `${pedidoId}-sub-${idxGeneral}-${i}`;
-              const estaTachadoComp = !!tachados[claveComp];
-
-              return (
-                <p 
-                  key={i} 
-                  onClick={() => alternarTachado(claveComp)}
-                  className={`text-[11px] font-medium capitalize flex items-center gap-1.5 cursor-pointer select-none transition-all ${
-                    estaTachadoComp ? 'line-through text-slate-600 opacity-50' : 'text-slate-300 hover:text-emerald-300'
-                  }`}
-                  title="Click para tachar componente"
-                >
-                  <span className={`text-[10px] ${estaTachadoComp ? 'text-slate-600' : 'text-emerald-400'}`}>•</span>
-                  <span>{comp}</span>
-                </p>
-              );
-            })}
+            {componentes.map((comp, i) => (
+              <p 
+                key={i} 
+                className={`text-[11px] font-medium capitalize flex items-center gap-1.5 transition-all ${
+                  estaTachadoBloque ? 'line-through text-slate-600 opacity-50' : 'text-slate-300'
+                }`}
+              >
+                <span className={`text-[10px] ${estaTachadoBloque ? 'text-slate-600' : 'text-emerald-400'}`}>•</span>
+                <span>{comp}</span>
+              </p>
+            ))}
           </div>
         )}
       </div>
