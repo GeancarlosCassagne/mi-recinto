@@ -332,7 +332,9 @@ export default function ClientMenu() {
       }
     }
 
-    const detalles = `(${presa})${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
+    // 🟢 Si es Tonga, incluye explícitamente "Criolla" o "Granja" en los detalles
+    const prefijoTipo = esTonga && tipoGallina ? `${tipoGallina} ` : '';
+    const detalles = `(${prefijoTipo}${presa})${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
     const idUnico = `${tongaSeleccionada.id}-${detalles.replace(/\s+/g, '-')}`;
 
     const platoConPrecioCalculado = {
