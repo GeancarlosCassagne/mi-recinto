@@ -97,6 +97,7 @@ export default function ClientMenu() {
   const inicializarMenu = async () => {
     const hoy = obtenerFechaLocal();
     
+    // 1. Verificar estado de caja
     const { data: caja } = await supabase
       .from('cajas')
       .select('estado')
@@ -105,44 +106,45 @@ export default function ClientMenu() {
       
     if (caja?.estado === 'cerrada') {
       setCajaCerradaHoy(true);
+      return;
     } else {
       setCajaCerradaHoy(false);
     }
 
+    // 2. Traer todos los platos del banco general
     const { data: todosLosPlatos } = await supabase
       .from('platos')
-      .select('id, nombre, precio, disponible, categoria');
+      .select('id, nombre, precio, disponible, categoria')
+      .order('nombre', { ascending: true });
 
-    const { data: datosMenuDiario, error } = await supabase
+    // 3. Traer los IDs seleccionados para el menú de hoy
+    const { data: datosMenuDiario } = await supabase
       .from('menu_diario')
-      .select(`
-        plato_id,
-        platos (id, nombre, precio, disponible, categoria)
-      `)
+      .select('plato_id')
       .eq('fecha', hoy);
     
-    if (!error && todosLosPlatos) {
+    if (todosLosPlatos) {
       const idsAsignados = datosMenuDiario ? datosMenuDiario.map((item: any) => item.plato_id) : [];
       
-      const platosFiltrados = todosLosPlatos.filter(plato => {
+      const platosFiltrados = todosLosPlatos.filter((plato) => {
         const nombreLimpio = plato.nombre.toLowerCase();
-        const esComponenteEstructural = plato.categoria === 'presa_criolla' ||
-                                        plato.categoria === 'presa_granja' ||
-                                        plato.categoria === 'presa_caldo' ||
-                                        nombreLimpio.includes('almuerzo del día');
         
+        // Elementos estructurales y categorías base
+        const esComponenteEstructural = 
+          plato.categoria === 'presa_criolla' ||
+          plato.categoria === 'presa_granja' ||
+          plato.categoria === 'presa_caldo' ||
+          plato.categoria === 'fijo' ||
+          plato.categoria === 'jugo' ||
+          plato.categoria === 'bebida' ||
+          nombreLimpio.includes('almuerzo del día') ||
+          nombreLimpio.includes('tonga');
+
+        // Pasa si es estructural O si fue marcado en el Admin para hoy
         return esComponenteEstructural || idsAsignados.includes(plato.id);
       });
 
-      const platosMapeados = platosFiltrados.map(p => {
-        const deMenuDiario = datosMenuDiario?.find((d: any) => d.plato_id === p.id) as any;
-        return {
-          ...p,
-          categoria: p.categoria || deMenuDiario?.platos?.categoria || 'segundo'
-        };
-      });
-
-      setPlatos(platosMapeados as Plato[]);
+      setPlatos(platosFiltrados as Plato[]);
     }
   };
 
