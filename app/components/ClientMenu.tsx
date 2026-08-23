@@ -676,8 +676,13 @@ export default function ClientMenu() {
   // Categorización de la carta
   const platosTradicionales = platos.filter(p => {
     const n = p.nombre.toLowerCase();
-    return (n.includes('tonga') || n.includes('seco criollo') || n.includes('hornado') || n.includes('caldo criollo')) &&
-           p.categoria !== 'presa_criolla' && p.categoria !== 'presa_granja' && p.categoria !== 'presa_caldo';
+    const esHornado = n.includes('hornado') || n.includes('horneado');
+    
+    return (n.includes('tonga') || n.includes('seco criollo') || n.includes('caldo criollo')) &&
+           !esHornado &&
+           p.categoria !== 'presa_criolla' && 
+           p.categoria !== 'presa_granja' && 
+           p.categoria !== 'presa_caldo';
   });
 
   const jugosNaturales = platos.filter(p => {
