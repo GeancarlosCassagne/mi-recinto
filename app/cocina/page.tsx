@@ -139,7 +139,8 @@ export default function CocinaPage() {
     return { numeroMesa: rawMesa, esParaLlevar, mesera, especificaciones, adicionales };
   };
 
-  const clasificarItemsComanda = (especificaciones: string[], detalles: DetallePedido[]) => {
+  // 🟢 Clasificador con precios fijos según tipo y recargo para llevar
+  const clasificarItemsComanda = (especificaciones: string[], detalles: DetallePedido[], esParaLlevar: boolean) => {
     const completos: { texto: string; cantidad: string; precio: number }[] = [];
     const segundos: { texto: string; cantidad: string; precio: number }[] = [];
     const caldos: { texto: string; cantidad: string; precio: number }[] = [];
@@ -149,34 +150,48 @@ export default function CocinaPage() {
       especificaciones.forEach(item => {
         const partes = item.trim().split(/\s+(.+)/);
         const tieneCantidad = partes[0] && partes[0].match(/^\d+x$/i);
-        const cantidad = tieneCantidad ? partes[0].toUpperCase() : '1X';
+        const cantidadStr = tieneCantidad ? partes[0].toUpperCase() : '1X';
+        const cantidadNum = tieneCantidad ? parseInt(partes[0].replace(/x/i, ''), 10) : 1;
         const textoDetalle = tieneCantidad ? partes[1] : item;
 
-        const detCoincidente = detalles?.find(d => textoDetalle.toLowerCase().includes(d.platos?.nombre.toLowerCase()));
-        const precioUnit = Number(detCoincidente?.precio_unitario || detCoincidente?.platos?.precio || 0);
-        const itemObj = { texto: textoDetalle, cantidad, precio: precioUnit };
-
         const textoMin = textoDetalle.toLowerCase();
+        let precioCalculado = 0;
 
         if (textoMin.includes('completo:')) {
-          completos.push(itemObj);
-        } else if (textoMin.includes('solo segundo:') || textoMin.includes('tonga') || textoMin.includes('seco criollo') || textoMin.includes('hornado')) {
-          segundos.push(itemObj);
-        } else if (textoMin.includes('solo caldo:') || textoMin.includes('caldo')) {
-          caldos.push(itemObj);
+          precioCalculado = (esParaLlevar ? 3.25 : 3.00) * cantidadNum;
+          completos.push({ texto: textoDetalle, cantidad: cantidadStr, precio: precioCalculado });
+        } else if (textoMin.includes('solo segundo:')) {
+          precioCalculado = (esParaLlevar ? 2.75 : 2.50) * cantidadNum;
+          segundos.push({ texto: textoDetalle, cantidad: cantidadStr, precio: precioCalculado });
+        } else if (textoMin.includes('solo caldo:')) {
+          precioCalculado = (esParaLlevar ? 1.75 : 1.50) * cantidadNum;
+          caldos.push({ texto: textoDetalle, cantidad: cantidadStr, precio: precioCalculado });
+        } else if (textoMin.includes('tonga')) {
+          const esGranja = textoMin.includes('granja');
+          const baseTonga = esGranja ? (esParaLlevar ? 3.00 : 2.75) : (esParaLlevar ? 5.25 : 5.00);
+          precioCalculado = baseTonga * cantidadNum;
+          segundos.push({ texto: textoDetalle, cantidad: cantidadStr, precio: precioCalculado });
+        } else if (textoMin.includes('caldo criollo')) {
+          precioCalculado = (esParaLlevar ? 5.25 : 5.00) * cantidadNum;
+          caldos.push({ texto: textoDetalle, cantidad: cantidadStr, precio: precioCalculado });
+        } else if (textoMin.includes('seco criollo')) {
+          precioCalculado = (esParaLlevar ? 5.25 : 5.00) * cantidadNum;
+          segundos.push({ texto: textoDetalle, cantidad: cantidadStr, precio: precioCalculado });
         } else {
-          segundos.push(itemObj);
+          const det = detalles?.find(d => textoDetalle.toLowerCase().includes(d.platos?.nombre.toLowerCase()));
+          const precioUnit = Number(det?.precio_unitario || det?.platos?.precio || 0);
+          segundos.push({ texto: textoDetalle, cantidad: cantidadStr, precio: precioUnit * cantidadNum });
         }
       });
 
       detalles?.filter(d => {
         const n = d.platos?.nombre.toLowerCase();
-        return !n.includes('tonga') && !n.includes('almuerzo') && !n.includes('hornado') && !n.includes('criollo');
+        return !n.includes('tonga') && !n.includes('almuerzo') && !n.includes('hornado') && !n.includes('seco criollo') && !n.includes('caldo criollo');
       }).forEach(d => {
         bebidasYExtras.push({
           texto: d.platos?.nombre,
           cantidad: `x${d.cantidad}`,
-          precio: Number(d.precio_unitario) * d.cantidad
+          precio: Number(d.precio_unitario || d.platos?.precio || 0) * d.cantidad
         });
       });
 
@@ -202,18 +217,17 @@ export default function CocinaPage() {
     return { completos, segundos, caldos, bebidasYExtras };
   };
 
+  // 🟢 Renderizado con preservación de paréntesis de presas y sanitización
   const renderItemTextoLimpio = (texto: string) => {
     let titulo = texto;
     let componentes: string[] = [];
 
-    // Limpieza de prefijos y dobles paréntesis redundantes
     let textoLimpio = texto
       .replace(/Almuerzo Del Día/gi, '')
       .replace(/\(\(/g, '(')
       .replace(/\)\)/g, ')')
       .trim();
 
-    // Extracción precisa de componentes del almuerzo
     const regexAlmuerzo = /\((Completo|Solo Segundo|Solo Caldo):\s*(.*?)\)$/i;
     const match = textoLimpio.match(regexAlmuerzo);
 
@@ -310,7 +324,7 @@ export default function CocinaPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           {pedidos.map((p) => {
             const { numeroMesa, esParaLlevar, mesera, especificaciones, adicionales } = desglosarCabeceraPedido(p.mesa);
-            const { completos, segundos, caldos, bebidasYExtras } = clasificarItemsComanda(especificaciones, p.detalles_pedido);
+            const { completos, segundos, caldos, bebidasYExtras } = clasificarItemsComanda(especificaciones, p.detalles_pedido, esParaLlevar);
             const hora = new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const estaDespachado = p.estado === 'entregado';
 
