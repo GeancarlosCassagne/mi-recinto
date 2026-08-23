@@ -230,6 +230,7 @@ export default function CocinaPage() {
                     </div>
                   )}
 
+                  {/* CABECERA */}
                   <div className={`p-4 border-b border-slate-700/50 flex justify-between items-center ${estaDespachado ? 'bg-slate-900/20' : 'bg-slate-800/40'}`}>
                     <div>
                       <h2 className={`text-xl font-black tracking-tight uppercase ${estaDespachado ? 'text-slate-400 line-through' : 'text-white'}`}>
@@ -244,7 +245,6 @@ export default function CocinaPage() {
                       <span className="text-xs bg-slate-900 px-2.5 py-1.5 rounded-xl text-slate-400 font-mono font-bold flex items-center gap-1 border border-slate-700/60">
                         <Clock className="h-3.5 w-3.5 text-amber-500" /> {hora}
                       </span>
-                      {/* BOTÓN ELIMINAR COMANDA */}
                       <button
                         onClick={() => setPedidoAEliminar({ id: p.id, mesa: numeroMesa, total: Number(p.total) })}
                         className="p-1.5 bg-red-950/40 border border-red-800/60 text-red-400 hover:text-white hover:bg-red-600 rounded-xl transition"
@@ -255,42 +255,81 @@ export default function CocinaPage() {
                     </div>
                   </div>
 
-                  <div className="p-4 space-y-3">
-                    {/* LISTA DE PLATOS CON PRECIOS */}
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Platos y Productos</p>
-                      <div className="space-y-1.5">
-                        {p.detalles_pedido?.map((det, idx) => {
-                          const precioUnit = Number(det.precio_unitario || det.platos?.precio || 0);
-                          const subtotal = precioUnit * det.cantidad;
+                  {/* CUERPO COMPACTO Y UNIFICADO */}
+                  <div className="p-4 space-y-2.5">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Composición de la Orden:</p>
+                    
+                    <div className="space-y-2">
+                      {/* Si el pedido tiene especificaciones (Tonga o Almuerzos detallados) los mostramos directamente */}
+                      {especificaciones.length > 0 ? (
+                        especificaciones.map((item, idx) => {
+                          const partes = item.trim().split(/\s+(.+)/);
+                          const tieneCantidad = partes[0] && partes[0].match(/^\d+x$/i);
+                          const cantidad = tieneCantidad ? partes[0].toUpperCase() : '1X';
+                          const textoDetalle = tieneCantidad ? partes[1] : item;
+
+                          // Coincidencia con detalle para extraer precio
+                          const detCoincidente = p.detalles_pedido?.find(d => textoDetalle.toLowerCase().includes(d.platos?.nombre.toLowerCase()));
+                          const precioUnit = Number(detCoincidente?.precio_unitario || detCoincidente?.platos?.precio || 0);
 
                           return (
-                            <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/50 p-2.5 border border-slate-700/40 rounded-xl">
-                              <div className="min-w-0 pr-2">
-                                <p className={`font-bold capitalize ${estaDespachado ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
-                                  • {det.platos?.nombre}
-                                </p>
-                                <span className="text-[10px] text-slate-400 font-mono font-semibold">
-                                  ${precioUnit.toFixed(2)} c/u
+                            <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/90 border border-amber-500/30 p-2.5 rounded-xl text-slate-100 shadow-sm gap-2">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0">
+                                  {cantidad}
+                                </span>
+                                <span className="font-bold capitalize leading-snug truncate">
+                                  {textoDetalle}
                                 </span>
                               </div>
+                              {precioUnit > 0 && (
+                                <span className="font-mono font-black text-xs text-amber-300 shrink-0">
+                                  ${precioUnit.toFixed(2)}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        // Si son platos normales simples
+                        p.detalles_pedido?.map((det, idx) => {
+                          const precioUnit = Number(det.precio_unitario || det.platos?.precio || 0);
+                          return (
+                            <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/70 p-2.5 border border-slate-700/50 rounded-xl">
+                              <span className="font-bold capitalize text-slate-200">
+                                • {det.platos?.nombre}
+                              </span>
                               <div className="flex items-center gap-2 shrink-0">
-                                <span className={`font-black text-xs px-2 py-0.5 rounded-lg ${estaDespachado ? 'bg-slate-800 text-slate-500 border border-slate-700' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                                <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-md">
                                   x{det.cantidad}
                                 </span>
-                                <span className="font-mono font-black text-xs text-slate-300">
-                                  ${subtotal.toFixed(2)}
+                                <span className="font-mono font-black text-slate-300">
+                                  ${(precioUnit * det.cantidad).toFixed(2)}
                                 </span>
                               </div>
                             </div>
                           );
-                        })}
-                      </div>
+                        })
+                      )}
+
+                      {/* Platos sueltos como Bebidas o Adicionales si se pidieron junto a tongas */}
+                      {especificaciones.length > 0 && p.detalles_pedido?.filter(d => {
+                        const n = d.platos?.nombre.toLowerCase();
+                        return !n.includes('tonga') && !n.includes('almuerzo') && !n.includes('hornado') && !n.includes('criollo');
+                      }).map((detExtra, i) => (
+                        <div key={i} className="flex justify-between items-center text-xs bg-slate-900/50 p-2 rounded-xl border border-slate-700/30">
+                          <span className="font-bold capitalize text-slate-300">• {detExtra.platos?.nombre}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="bg-slate-800 text-slate-400 font-bold px-2 py-0.5 rounded-md">x{detExtra.cantidad}</span>
+                            <span className="font-mono font-black text-xs text-slate-400">${(Number(detExtra.precio_unitario) * detExtra.cantidad).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
 
+                    {/* EXTRAS ESCRITOS */}
                     {adicionales && adicionales.length > 0 && (
-                      <div className="mt-3 space-y-1">
-                        <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest mb-1">Notas / Adicionales:</p>
+                      <div className="mt-2 space-y-1">
                         {adicionales.map((item, index) => (
                           <div key={index} className="bg-sky-950/40 border border-sky-900/40 p-2 rounded-xl text-xs font-bold text-sky-300 capitalize">
                             ➕ {item}
@@ -299,17 +338,8 @@ export default function CocinaPage() {
                       </div>
                     )}
 
-                    {especificaciones.length > 0 && (
-                      <div className="mt-4 border-t border-dashed border-slate-700 pt-3">
-                        <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-1.5">Detalles / Presas del Pedido:</p>
-                        <div className="flex flex-col gap-1">
-                          {templatesTexto(especificaciones)}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* TOTAL DESTACADO */}
-                    <div className="mt-3 pt-2.5 border-t border-slate-700/80 flex justify-between items-center bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/40">
+                    {/* TOTAL */}
+                    <div className="mt-2 pt-2 border-t border-slate-700/80 flex justify-between items-center bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/40">
                       <span className="text-xs font-black uppercase tracking-wider text-slate-400">Total a Cobrar:</span>
                       <span className="text-base font-black text-emerald-400 font-mono flex items-center">
                         <DollarSign className="h-4 w-4" />{Number(p.total).toFixed(2)}
@@ -318,16 +348,17 @@ export default function CocinaPage() {
                   </div>
                 </div>
 
+                {/* BOTÓN DESPACHAR */}
                 <div className="p-4 bg-slate-800/80 border-t border-slate-700/40">
                   {estaDespachado ? (
-                    <div className="w-full bg-slate-900 text-slate-500 font-bold text-xs uppercase py-3.5 rounded-xl text-center border border-slate-800 flex items-center justify-center gap-1.5">
+                    <div className="w-full bg-slate-900 text-slate-500 font-bold text-xs uppercase py-3 rounded-xl text-center border border-slate-800 flex items-center justify-center gap-1.5">
                       <AlertCircle className="h-4 w-4" />
                       <span>Listo y Entregado</span>
                     </div>
                   ) : (
                     <button 
                       onClick={() => setPedidoAConfirmar(p)}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase py-3.5 rounded-xl transition flex items-center justify-center gap-1.5 tracking-wider shadow-md focus:outline-none"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase py-3 rounded-xl transition flex items-center justify-center gap-1.5 tracking-wider shadow-md focus:outline-none"
                     >
                       <CheckCircle className="h-4 w-4 stroke-[3]" />
                       <span>Despachar Pedido</span>
@@ -373,34 +404,19 @@ export default function CocinaPage() {
               </div>
 
               <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                <div className="space-y-1.5">
-                  {pedidoAConfirmar.detalles_pedido?.map((det, idx) => (
+                {especificaciones.length > 0 ? (
+                  especificaciones.map((item, idx) => (
+                    <p key={idx} className="text-xs text-amber-100 font-bold capitalize bg-slate-900/60 p-2 rounded-lg border border-slate-700">
+                      • {item}
+                    </p>
+                  ))
+                ) : (
+                  pedidoAConfirmar.detalles_pedido?.map((det, idx) => (
                     <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/50 p-2 rounded-lg border border-slate-750">
                       <span className="font-bold text-slate-200 capitalize">{det.platos?.nombre}</span>
                       <span className="bg-emerald-500/10 text-emerald-400 font-black px-2 py-0.5 rounded">x{det.cantidad}</span>
                     </div>
-                  ))}
-                </div>
-
-                {adicionales && adicionales.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Notas / Adicionales:</p>
-                    {adicionales.map((item, index) => (
-                      <div key={index} className="bg-sky-950/40 border border-sky-900/40 p-2 rounded-lg text-xs font-bold text-sky-300 capitalize">
-                        ➕ {item}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {especificaciones.length > 0 && (
-                  <div className="mt-2 bg-slate-900/40 rounded-xl p-2.5 border border-slate-750/60 space-y-1">
-                    {especificaciones.map((item, index) => (
-                      <p key={index} className="text-[11px] text-amber-100/90 font-medium capitalize pl-2 border-l-2 border-amber-500/40">
-                        {item}
-                      </p>
-                    ))}
-                  </div>
+                  ))
                 )}
               </div>
 
@@ -420,7 +436,7 @@ export default function CocinaPage() {
                   onClick={ejecutarDespacho}
                   className="w-1/2 bg-emerald-600 text-white py-3 rounded-xl hover:bg-emerald-700 shadow-md transition"
                 >
-                  Sí, Despachar Pedido
+                  Sí, Despachar
                 </button>
               </div>
 
@@ -429,7 +445,7 @@ export default function CocinaPage() {
         );
       })()}
 
-      {/* MODAL CENTRAL CONFIRMAR ELIMINACIÓN */}
+      {/* MODAL CONFIRMAR ELIMINACIÓN */}
       {pedidoAEliminar && (
         <div className="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4 text-left animate-in zoom-in-95 duration-200 text-white">
@@ -472,31 +488,4 @@ export default function CocinaPage() {
 
     </div>
   );
-}
-
-function templatesTexto(spec: string[]) {
-  return spec.map((item, index) => {
-    const partes = item.trim().split(/\s+(.+)/);
-    const tieneCantidad = partes[0] && partes[0].match(/^\d+x$/i);
-    const cantidad = tieneCantidad ? partes[0].toUpperCase() : null;
-    const textoDetalle = tieneCantidad ? partes[1] : item;
-
-    return (
-      <div 
-        key={index} 
-        className="flex items-center gap-2.5 bg-slate-900/90 border border-amber-500/30 p-2.5 rounded-xl text-xs font-bold text-amber-100 shadow-sm"
-      >
-        {cantidad ? (
-          <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-lg text-[11px] shrink-0">
-            {cantidad}
-          </span>
-        ) : (
-          <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
-        )}
-        <span className="capitalize leading-snug flex-1 text-slate-100 font-extrabold tracking-wide">
-          {textoDetalle}
-        </span>
-      </div>
-    );
-  });
 }
