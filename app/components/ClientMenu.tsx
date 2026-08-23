@@ -111,40 +111,14 @@ export default function ClientMenu() {
       setCajaCerradaHoy(false);
     }
 
-    // 2. Traer todos los platos del banco general
+    // 2. Traer directamente todos los platos del banco general sin bloqueo de fecha
     const { data: todosLosPlatos } = await supabase
       .from('platos')
       .select('id, nombre, precio, disponible, categoria')
       .order('nombre', { ascending: true });
-
-    // 3. Traer los IDs seleccionados para el menú de hoy
-    const { data: datosMenuDiario } = await supabase
-      .from('menu_diario')
-      .select('plato_id')
-      .eq('fecha', hoy);
     
     if (todosLosPlatos) {
-      const idsAsignados = datosMenuDiario ? datosMenuDiario.map((item: any) => item.plato_id) : [];
-      
-      const platosFiltrados = todosLosPlatos.filter((plato) => {
-        const nombreLimpio = plato.nombre.toLowerCase();
-        
-        // Elementos estructurales y categorías base
-        const esComponenteEstructural = 
-          plato.categoria === 'presa_criolla' ||
-          plato.categoria === 'presa_granja' ||
-          plato.categoria === 'presa_caldo' ||
-          plato.categoria === 'fijo' ||
-          plato.categoria === 'jugo' ||
-          plato.categoria === 'bebida' ||
-          nombreLimpio.includes('almuerzo del día') ||
-          nombreLimpio.includes('tonga');
-
-        // Pasa si es estructural O si fue marcado en el Admin para hoy
-        return esComponenteEstructural || idsAsignados.includes(plato.id);
-      });
-
-      setPlatos(platosFiltrados as Plato[]);
+      setPlatos(todosLosPlatos as Plato[]);
     }
   };
 
@@ -243,7 +217,7 @@ export default function ClientMenu() {
 
     const nombreLimpio = plato.nombre.toLowerCase();
     
-    // 1. Tonga: Pregunta el tipo primero (Criolla o Granja)
+    // 1. Tonga: Pregunta tipo (Criolla o Granja)
     if (nombreLimpio.includes('tonga')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
@@ -533,8 +507,16 @@ export default function ClientMenu() {
     }
   };
 
-  const opcionesSegundos = platos.filter(p => p.categoria === 'segundo');
+  // 🟢 FILTRADO FLEXIBLE PARA SEGUNDOS Y CALDOS
+  const opcionesSegundos = platos.filter(p => 
+    p.categoria === 'segundo' || 
+    (!['presa_criolla', 'presa_granja', 'presa_caldo', 'fijo', 'jugo', 'bebida', 'caldo'].includes(p.categoria) && 
+     !p.nombre.toLowerCase().includes('almuerzo') && 
+     !p.nombre.toLowerCase().includes('tonga'))
+  );
+
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
+
   const opcionesBebidas = platos.filter(p => {
     const cat = p.categoria;
     const n = p.nombre.toLowerCase();
