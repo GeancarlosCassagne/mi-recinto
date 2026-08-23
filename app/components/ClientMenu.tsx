@@ -240,33 +240,45 @@ export default function ClientMenu() {
     if (!plato) return;
 
     const nombreLimpio = plato.nombre.toLowerCase();
+    
+    // 1. Tonga: Pregunta el tipo primero (Criolla o Granja)
     if (nombreLimpio.includes('tonga')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('tipo');
       setTipoGallina('');
-    } else if (nombreLimpio.includes('seco criollo')) {
+    } 
+    // 2. Seco Criollo: Directo a presas Criollas
+    else if (nombreLimpio.includes('seco criollo')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Criolla');
-    } else if (nombreLimpio.includes('pollo horneado')) {
+    } 
+    // 3. Pollo Hornado / Horneado: Directo a presas de Granja
+    else if (nombreLimpio.includes('hornado') || nombreLimpio.includes('horneado')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Granja');
-    } else if (nombreLimpio.includes('caldo criollo')) {
+    } 
+    // 4. Caldo Criollo / Caldos: Directo a presas exclusivas de Caldo
+    else if (nombreLimpio.includes('caldo')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Caldo');
-    } else if (nombreLimpio.includes('almuerzo del día')) {
+    } 
+    // 5. Almuerzo del día
+    else if (nombreLimpio.includes('almuerzo del día')) {
       setAlmuerzoSeleccionado(plato);
       setConfigurandoAlmuerzo(true);
       setPasoAlmuerzo('tipo');
       setSegundoElegido('');
       setSopaElegida('');
-    } else {
+    } 
+    // 6. Platos sueltos / Bebidas
+    else {
       agregarAlCarritoNormal(plato);
     }
   };
@@ -296,13 +308,14 @@ export default function ClientMenu() {
     if (esTonga) {
       const esGranja = tipoGallina.toLowerCase().includes('granja');
       precioBase = esGranja ? 2.75 : 5.00;
+      if (tipoEntrega === 'llevar') precioBase += 0.25;
     } else {
       if (tipoEntrega === 'llevar') {
         precioBase += 0.25;
       }
     }
 
-    const detalles = `${tipoGallina ? tipoGallina + ' ' : ''}(${presa})${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
+    const detalles = `(${presa})${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
     const idUnico = `${tongaSeleccionada.id}-${detalles.replace(/\s+/g, '-')}`;
 
     const platoConPrecioCalculado = {
@@ -546,7 +559,6 @@ export default function ClientMenu() {
            n.includes('horchata');
   });
 
-  // 🟢 FILTRADO DINÁMICO DE PRESAS SEGÚN LA CATEGORÍA DE COCINA
   const opcionesPresasSegunGallina = () => {
     const t = tipoGallina.toLowerCase();
     if (t.includes('criolla')) return platos.filter(p => p.categoria === 'presa_criolla');
@@ -855,11 +867,13 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* 🟢 MODAL CONFIGURADOR TONGA Y SECOS CON SELECCIÓN DE GALLINA Y PRESA VINCULADAS */}
+        {/* MODAL CONFIGURADOR TONGA, SECOS, HORNADOS Y CALDOS */}
         {configurandoTonga && (
           <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4">
             <div className="flex justify-between items-center border-b border-emerald-100 pb-3">
-              <h3 className="text-base font-bold text-emerald-950 flex items-center gap-2"><span>Personalizando {tongaSeleccionada?.nombre}</span></h3>
+              <h3 className="text-base font-bold text-emerald-950 flex items-center gap-2">
+                <span>Personalizando {tongaSeleccionada?.nombre}</span>
+              </h3>
               <button onClick={() => setConfigurandoTonga(false)} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
             </div>
             {pasoTonga === 'tipo' ? (
@@ -884,17 +898,20 @@ export default function ClientMenu() {
               </div>
             ) : (
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">2. Presa disponible para {tipoGallina}</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  2. Presa disponible para {tipoGallina}
+                </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
                   {opcionesPresasSegunGallina().length === 0 ? (
                     <p className="text-xs text-gray-400 italic col-span-4 text-center py-3">No hay presas registradas para esta preparación.</p>
                   ) : (
                     opcionesPresasSegunGallina().map((p) => {
                       const nombreLimpioPresa = p.nombre
-  .replace(' Criolla', '')
-  .replace(' Granja', '')
-  .replace(' Caldo', '')
-  .replace(' (Palizada)', ''); // Quitamos la palabra entre paréntesis si existiera
+                        .replace(' Criolla', '')
+                        .replace(' Granja', '')
+                        .replace(' Caldo', '')
+                        .replace(' (Palizada)', '');
+
                       return (
                         <button 
                           key={p.id} 
@@ -953,7 +970,7 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* RESTO DEL CATÁLOGO REORDENADO */}
+        {/* RESTO DEL CATÁLOGO */}
         <div className="space-y-4">
           <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest pl-1">Carta y Adicionales</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
