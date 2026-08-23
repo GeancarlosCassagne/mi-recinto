@@ -253,35 +253,30 @@ export default function ClientMenu() {
 
     const nombreLimpio = plato.nombre.toLowerCase();
     
-    // 1. Tonga
     if (nombreLimpio.includes('tonga')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('tipo');
       setTipoGallina('');
     } 
-    // 2. Seco Criollo
     else if (nombreLimpio.includes('seco criollo')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Criolla');
     } 
-    // 3. Pollo Hornado
     else if (nombreLimpio.includes('hornado') || nombreLimpio.includes('horneado')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Granja');
     } 
-    // 4. Caldo Criollo
     else if (nombreLimpio.includes('caldo criollo')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Caldo');
     } 
-    // 5. Almuerzo del día
     else if (nombreLimpio.includes('almuerzo del día')) {
       setAlmuerzoSeleccionado(plato);
       setConfigurandoAlmuerzo(true);
@@ -289,7 +284,6 @@ export default function ClientMenu() {
       setSegundoElegido('');
       setSopaElegida('');
     } 
-    // 6. Colas (Configurador interactivo si se llama solo "Cola")
     else if (nombreLimpio === 'cola' || nombreLimpio.startsWith('cola ')) {
       if (nombreLimpio === 'cola') {
         setColaSeleccionada(plato);
@@ -299,12 +293,10 @@ export default function ClientMenu() {
         agregarAlCarritoNormal(plato);
       }
     }
-    // 7. Jugos (Configurador interactivo si es el botón genérico "Jugo")
     else if (nombreLimpio === 'jugo' || nombreLimpio === 'jugos') {
       setJugoSeleccionado(plato);
       setConfigurandoJugo(true);
     }
-    // 8. Platos sueltos
     else {
       agregarAlCarritoNormal(plato);
     }
@@ -681,7 +673,7 @@ export default function ClientMenu() {
 
   const platoAlmuerzoDelDia = platos.find(p => p.nombre.toLowerCase().includes('almuerzo del día'));
   
-  // 🟢 CLASIFICACIÓN MODULAR DE LA CARTA PARA MESERAS
+  // Categorización de la carta
   const platosTradicionales = platos.filter(p => {
     const n = p.nombre.toLowerCase();
     return (n.includes('tonga') || n.includes('seco criollo') || n.includes('hornado') || n.includes('caldo criollo')) &&
@@ -719,40 +711,56 @@ export default function ClientMenu() {
     );
   }
 
-  // Componente reutilizable para renderizar tarjetas de platos
-  const renderTarjetaPlato = (plato: Plato) => (
-    <div key={plato.id} className={`border rounded-2xl p-4 flex flex-col justify-between transition ${plato.disponible ? 'bg-white border-gray-200 hover:shadow-sm' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
-      <div>
-        <h3 className="text-sm font-bold capitalize text-gray-950">{plato.nombre}</h3>
-        {!plato.disponible && <span className="inline-block bg-red-100 text-red-700 text-[9px] font-bold px-1.5 py-0.5 rounded-md mt-1 uppercase">Agotado</span>}
+  // 🟢 Tarjeta con estilo adaptable según categoría
+  const renderTarjetaPlato = (plato: Plato, tema: 'emerald' | 'amber' | 'sky' | 'purple') => {
+    const estilosBoton = {
+      emerald: 'bg-emerald-700 hover:bg-emerald-800 text-white',
+      amber: 'bg-amber-700 hover:bg-amber-800 text-white',
+      sky: 'bg-sky-700 hover:bg-sky-800 text-white',
+      purple: 'bg-purple-700 hover:bg-purple-800 text-white'
+    }[tema];
+
+    const estiloPrecio = {
+      emerald: 'text-emerald-800',
+      amber: 'text-amber-800',
+      sky: 'text-sky-800',
+      purple: 'text-purple-800'
+    }[tema];
+
+    return (
+      <div key={plato.id} className={`bg-white border rounded-2xl p-4 flex flex-col justify-between transition-all duration-150 shadow-sm ${plato.disponible ? 'border-gray-200/90 hover:border-gray-300 hover:shadow' : 'border-gray-200 bg-gray-50/70 opacity-50'}`}>
+        <div>
+          <h3 className="text-sm font-bold capitalize text-gray-950 tracking-tight">{plato.nombre}</h3>
+          {!plato.disponible && <span className="inline-block bg-red-100 text-red-700 text-[9px] font-bold px-1.5 py-0.5 rounded-md mt-1 uppercase">Agotado</span>}
+        </div>
+        <div className="flex justify-between items-center mt-3.5 pt-2 border-t border-gray-100">
+          {plato.nombre.toLowerCase().includes('tonga') || plato.nombre.toLowerCase() === 'cola' ? (
+            <span className="text-[11px] font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-lg">
+              Elección
+            </span>
+          ) : (
+            <span className={`text-sm font-black font-mono ${estiloPrecio}`}>
+              ${Number(plato.precio).toFixed(2)}
+            </span>
+          )}
+          <button
+            onClick={() => plato.disponible && handleAgregarClick(plato)}
+            disabled={!plato.disponible}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1 ${plato.disponible ? estilosBoton : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+          >
+            <Plus className="h-3 w-3 stroke-[3]" />
+            <span>Agregar</span>
+          </button>
+        </div>
       </div>
-      <div className="flex justify-between items-center mt-3.5">
-        {plato.nombre.toLowerCase().includes('tonga') || plato.nombre.toLowerCase() === 'cola' ? (
-          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg">
-            Opciones a elegir
-          </span>
-        ) : (
-          <span className="text-sm font-black text-emerald-800">
-            ${Number(plato.precio).toFixed(2)}
-          </span>
-        )}
-        <button
-          onClick={() => plato.disponible && handleAgregarClick(plato)}
-          disabled={!plato.disponible}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1 ${plato.disponible ? 'bg-emerald-700 text-white hover:bg-emerald-800' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-        >
-          <Plus className="h-3 w-3 stroke-[3]" />
-          <span>Agregar</span>
-        </button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-8 relative text-gray-900 bg-white">
 
       {/* BANNER SELECCIÓN DE MESERA */}
-      <div className="md:col-span-3 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+      <div className="md:col-span-3 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center space-x-2.5">
           <User className="h-5 w-5 text-emerald-800" />
           <div>
@@ -1212,65 +1220,85 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* 🟢 SECCIONES ORGANIZADAS Y SEPARADAS DE LA CARTA */}
-        <div className="space-y-7">
+        {/* 🟢 SECCIONES CON CUADROS DE COLORES ELEGANTES Y SOBRIOS */}
+        <div className="space-y-6">
           
-          {/* 1. PLATOS TRADICIONALES Y FUERTES */}
+          {/* 1. CUADRO VERDE ESMERALDA: PLATOS TRADICIONALES Y FUERTES */}
           {platosTradicionales.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                <Flame className="h-4 w-4 text-emerald-700" />
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest">
-                  Platos Tradicionales y Fuertes
-                </h3>
+            <div className="bg-emerald-50/40 border border-emerald-200/80 rounded-2xl p-4.5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
+                <div className="flex items-center gap-2">
+                  <Flame className="h-4 w-4 text-emerald-800" />
+                  <h3 className="text-xs font-black text-emerald-950 uppercase tracking-widest">
+                    Platos Tradicionales y Fuertes
+                  </h3>
+                </div>
+                <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md uppercase">
+                  Especialidades
+                </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {platosTradicionales.map(renderTarjetaPlato)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {platosTradicionales.map(p => renderTarjetaPlato(p, 'emerald'))}
               </div>
             </div>
           )}
 
-          {/* 2. JUGOS Y BEBIDAS NATURALES */}
+          {/* 2. CUADRO ÁMBAR / MIEL: JUGOS Y BEBIDAS NATURALES */}
           {jugosNaturales.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                <Milk className="h-4 w-4 text-amber-600" />
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest">
-                  Jugos y Bebidas Naturales
-                </h3>
+            <div className="bg-amber-50/40 border border-amber-200/80 rounded-2xl p-4.5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-amber-200/60 pb-2">
+                <div className="flex items-center gap-2">
+                  <Milk className="h-4 w-4 text-amber-800" />
+                  <h3 className="text-xs font-black text-amber-950 uppercase tracking-widest">
+                    Jugos y Bebidas Naturales
+                  </h3>
+                </div>
+                <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md uppercase">
+                  Naturales
+                </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {jugosNaturales.map(renderTarjetaPlato)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {jugosNaturales.map(p => renderTarjetaPlato(p, 'amber'))}
               </div>
             </div>
           )}
 
-          {/* 3. BEBIDAS COMERCIALES */}
+          {/* 3. CUADRO AZUL PIZARRA / CIELO: BEBIDAS COMERCIALES */}
           {bebidasComerciales.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                <Coffee className="h-4 w-4 text-sky-600" />
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest">
-                  Bebidas Comerciales y Gaseosas
-                </h3>
+            <div className="bg-sky-50/40 border border-sky-200/80 rounded-2xl p-4.5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-sky-200/60 pb-2">
+                <div className="flex items-center gap-2">
+                  <Coffee className="h-4 w-4 text-sky-800" />
+                  <h3 className="text-xs font-black text-sky-950 uppercase tracking-widest">
+                    Bebidas Comerciales y Gaseosas
+                  </h3>
+                </div>
+                <span className="text-[10px] font-extrabold text-sky-800 bg-sky-100/80 px-2 py-0.5 rounded-md uppercase">
+                  Embotellados
+                </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {bebidasComerciales.map(renderTarjetaPlato)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {bebidasComerciales.map(p => renderTarjetaPlato(p, 'sky'))}
               </div>
             </div>
           )}
 
-          {/* 4. APERITIVOS, EXTRAS Y PORCIONES */}
+          {/* 4. CUADRO PÚRPURA / LAVANDA: APERITIVOS Y EXTRAS */}
           {aperitivosYExtras.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-                <Cookie className="h-4 w-4 text-purple-600" />
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest">
-                  Aperitivos, Empanadas y Extras
-                </h3>
+            <div className="bg-purple-50/40 border border-purple-200/80 rounded-2xl p-4.5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-purple-200/60 pb-2">
+                <div className="flex items-center gap-2">
+                  <Cookie className="h-4 w-4 text-purple-800" />
+                  <h3 className="text-xs font-black text-purple-950 uppercase tracking-widest">
+                    Aperitivos, Empanadas y Extras
+                  </h3>
+                </div>
+                <span className="text-[10px] font-extrabold text-purple-800 bg-purple-100/80 px-2 py-0.5 rounded-md uppercase">
+                  Aperitivos
+                </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {aperitivosYExtras.map(renderTarjetaPlato)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {aperitivosYExtras.map(p => renderTarjetaPlato(p, 'purple'))}
               </div>
             </div>
           )}
