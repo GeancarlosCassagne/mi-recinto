@@ -202,26 +202,31 @@ export default function CocinaPage() {
     return { completos, segundos, caldos, bebidasYExtras };
   };
 
-  // 🟢 Función para renderizar el texto en lista limpia
   const renderItemTextoLimpio = (texto: string) => {
     let titulo = texto;
     let componentes: string[] = [];
 
-    // Limpiamos cualquier rastro de la frase redundante antes de procesar
-    const textoSanitizado = texto.replace(/Almuerzo Del Día/gi, '').trim();
+    // Limpieza de prefijos y dobles paréntesis redundantes
+    let textoLimpio = texto
+      .replace(/Almuerzo Del Día/gi, '')
+      .replace(/\(\(/g, '(')
+      .replace(/\)\)/g, ')')
+      .trim();
 
-    if (texto.includes('(Completo:')) {
+    if (textoLimpio.toLowerCase().includes('completo:')) {
       titulo = 'Almuerzo Completo';
-      const partes = textoSanitizado.replace('(Completo:', '').replace(')', '').trim();
-      componentes = partes.split('+').map(s => s.trim().replace(/Almuerzo Del Día/gi, '').trim()).filter(Boolean);
-    } else if (texto.includes('(Solo Segundo:')) {
+      const parteInterna = textoLimpio.split(/completo:/i)[1]?.replace(/\)+$/, '').trim() || '';
+      componentes = parteInterna.split('+').map(s => s.trim().replace(/\)+$/, '')).filter(Boolean);
+    } else if (textoLimpio.toLowerCase().includes('solo segundo:')) {
       titulo = 'Solo Segundo';
-      const partes = textoSanitizado.replace('(Solo Segundo:', '').replace(')', '').trim();
-      componentes = partes.split('+').map(s => s.trim().replace(/Almuerzo Del Día/gi, '').trim()).filter(Boolean);
-    } else if (texto.includes('(Solo Caldo:')) {
+      const parteInterna = textoLimpio.split(/solo segundo:/i)[1]?.replace(/\)+$/, '').trim() || '';
+      componentes = parteInterna.split('+').map(s => s.trim().replace(/\)+$/, '')).filter(Boolean);
+    } else if (textoLimpio.toLowerCase().includes('solo caldo:')) {
       titulo = 'Solo Caldo';
-      const partes = textoSanitizado.replace('(Solo Caldo:', '').replace(')', '').trim();
-      componentes = partes.split('+').map(s => s.trim().replace(/Almuerzo Del Día/gi, '').trim()).filter(Boolean);
+      const parteInterna = textoLimpio.split(/solo caldo:/i)[1]?.replace(/\)+$/, '').trim() || '';
+      componentes = parteInterna.split('+').map(s => s.trim().replace(/\)+$/, '')).filter(Boolean);
+    } else {
+      titulo = textoLimpio;
     }
 
     return (
@@ -229,7 +234,8 @@ export default function CocinaPage() {
         <p className="font-extrabold text-white text-xs capitalize leading-tight">
           {titulo}
         </p>
-        {componentes.length > 0 ? (
+
+        {componentes.length > 0 && (
           <div className="mt-1 space-y-0.5 pl-1 border-l-2 border-slate-700">
             {componentes.map((comp, i) => (
               <p key={i} className="text-[11px] font-medium text-slate-300 capitalize flex items-center gap-1.5">
@@ -238,14 +244,11 @@ export default function CocinaPage() {
               </p>
             ))}
           </div>
-        ) : (
-          <p className="text-[11px] font-medium text-slate-300 capitalize">
-            {textoSanitizado || texto}
-          </p>
         )}
       </div>
     );
   };
+
   return (
     <div className="min-h-screen bg-slate-950 text-white p-6 w-full relative">
 
@@ -366,7 +369,7 @@ export default function CocinaPage() {
                   {/* CUERPO CON SECCIONES SEPARADAS */}
                   <div className="p-4 space-y-3.5">
 
-                    {/* 1. ALMUERZOS COMPLETOS (LISTA LIMPIA) */}
+                    {/* 1. ALMUERZOS COMPLETOS */}
                     {completos.length > 0 && (
                       <div className="space-y-1.5 bg-emerald-950/20 border border-emerald-800/40 p-2.5 rounded-2xl">
                         <div className="flex items-center gap-1.5 text-emerald-400 font-black text-[11px] uppercase tracking-wider border-b border-emerald-800/40 pb-1">
