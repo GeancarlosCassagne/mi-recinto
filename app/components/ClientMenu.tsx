@@ -111,14 +111,55 @@ export default function ClientMenu() {
       setCajaCerradaHoy(false);
     }
 
-    // 2. Traer directamente todos los platos del banco general sin bloqueo de fecha
+    // 2. Traer todos los platos del banco general
     const { data: todosLosPlatos } = await supabase
       .from('platos')
       .select('id, nombre, precio, disponible, categoria')
       .order('nombre', { ascending: true });
+
+    // 3. Buscar los platos establecidos en el menú diario para hoy
+    let { data: datosMenuDiario } = await supabase
+      .from('menu_diario')
+      .select('plato_id, fecha')
+      .eq('fecha', hoy);
+
+    // Si por desfase de zona horaria no hay registros exactos de hoy, toma los más recientes del menú diario
+    if (!datosMenuDiario || datosMenuDiario.length === 0) {
+      const { data: ultimoMenu } = await supabase
+        .from('menu_diario')
+        .select('plato_id, fecha')
+        .order('fecha', { ascending: false })
+        .limit(20);
+      
+      if (ultimoMenu && ultimoMenu.length > 0) {
+        const ultimaFecha = ultimoMenu[0].fecha;
+        datosMenuDiario = ultimoMenu.filter(item => item.fecha === ultimaFecha);
+      }
+    }
     
     if (todosLosPlatos) {
-      setPlatos(todosLosPlatos as Plato[]);
+      const idsAsignados = datosMenuDiario ? datosMenuDiario.map((item: any) => item.plato_id) : [];
+      
+      const platosFiltrados = todosLosPlatos.filter((plato) => {
+        const nombreLimpio = plato.nombre.toLowerCase();
+        
+        // Elementos fijos y estructurales que siempre deben existir en memoria
+        const esComponenteEstructural = 
+          plato.categoria === 'presa_criolla' ||
+          plato.categoria === 'presa_granja' ||
+          plato.categoria === 'presa_caldo' ||
+          plato.categoria === 'fijo' ||
+          plato.categoria === 'bebida' ||
+          nombreLimpio.includes('almuerzo del día') ||
+          nombreLimpio.includes('tonga') ||
+          nombreLimpio.includes('hornado') ||
+          nombreLimpio.includes('seco criollo');
+
+        // Los Segundos, Caldos y Jugos SOLO pasan si fueron marcados en el Admin (menu_diario)
+        return esComponenteEstructural || idsAsignados.includes(plato.id);
+      });
+
+      setPlatos(platosFiltrados as Plato[]);
     }
   };
 
@@ -238,8 +279,8 @@ export default function ClientMenu() {
       setPasoTonga('presa');
       setTipoGallina('Granja');
     } 
-    // 4. Caldo Criollo / Caldos: Directo a presas exclusivas de Caldo
-    else if (nombreLimpio.includes('caldo')) {
+    // 4. Caldo Criollo / Caldos fijos: Directo a presas exclusivas de Caldo
+    else if (nombreLimpio.includes('caldo criollo')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
@@ -507,14 +548,8 @@ export default function ClientMenu() {
     }
   };
 
-  // 🟢 FILTRADO FLEXIBLE PARA SEGUNDOS Y CALDOS
-  const opcionesSegundos = platos.filter(p => 
-    p.categoria === 'segundo' || 
-    (!['presa_criolla', 'presa_granja', 'presa_caldo', 'fijo', 'jugo', 'bebida', 'caldo'].includes(p.categoria) && 
-     !p.nombre.toLowerCase().includes('almuerzo') && 
-     !p.nombre.toLowerCase().includes('tonga'))
-  );
-
+  // Solo muestra los segundos y caldos seleccionados para hoy en el menú diario
+  const opcionesSegundos = platos.filter(p => p.categoria === 'segundo');
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
 
   const opcionesBebidas = platos.filter(p => {
