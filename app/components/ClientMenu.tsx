@@ -642,31 +642,7 @@ export default function ClientMenu() {
 
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
 
-  const opcionesBebidas = platos.filter(p => {
-    const cat = p.categoria;
-    const n = p.nombre.toLowerCase();
-    
-    const esColaOBebidaExtra = n.includes('cola') || 
-                               n.includes('litro') || 
-                               n.includes('personal') || 
-                               n.includes('vidrio') || 
-                               n.includes('plastico') || 
-                               n.includes('botella') ||
-                               n.includes('agua');
-
-    if (esColaOBebidaExtra) return false;
-
-    return cat === 'jugo' || 
-           cat === 'bebida' || 
-           n.includes('quaker') || 
-           n.includes('limon') || 
-           n.includes('jugo') || 
-           n.includes('mora') || 
-           n.includes('maracuya') || 
-           n.includes('chicha') ||
-           n.includes('tamarindo') ||
-           n.includes('horchata');
-  });
+  const opcionesBebidas = platos.filter(p => p.categoria === 'jugo');
 
   const opcionesPresasSegunGallina = () => {
     const t = tipoGallina.toLowerCase();
