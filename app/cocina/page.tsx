@@ -2,23 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { CheckCircle, Clock, User, Bike, UtensilsCrossed, AlertCircle, AlertTriangle, Lock } from 'lucide-react';
+import { CheckCircle, Clock, User, Bike, UtensilsCrossed, AlertCircle, AlertTriangle, Lock, Trash2, DollarSign } from 'lucide-react';
 
 interface DetallePedido {
   cantidad: number;
-  platos: { nombre: string };
+  precio_unitario: number;
+  platos: { nombre: string; precio: number };
 }
 
 interface Pedido {
   id: string;
   mesa: string;
+  total: number;
   estado: string;
   created_at: string;
   detalles_pedido: DetallePedido[];
 }
 
 export default function CocinaPage() {
-  // Estados para contraseña y acceso restringido COCINA
   const [autenticado, setAutenticado] = useState(false);
   const [passInput, setPassInput] = useState('');
   const [errorPass, setErrorPass] = useState(false);
@@ -37,17 +38,17 @@ export default function CocinaPage() {
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [pedidoAConfirmar, setPedidoAConfirmar] = useState<Pedido | null>(null);
+  const [pedidoAEliminar, setPedidoAEliminar] = useState<{ id: string; mesa: string; total: number } | null>(null);
+  const [eliminando, setEliminando] = useState(false);
 
   const obtenerPedidosDelDia = async () => {
-    // 1. Calculamos la fecha local exacta de Ecuador (UTC-5)
     const d = new Date();
     const offset = d.getTimezoneOffset() * 60000;
     const hoyLocal = new Date(d.getTime() - offset).toISOString().split('T')[0];
     
-    // 2. Traemos únicamente los pedidos creados en el rango del día de hoy
     const { data } = await supabase
       .from('pedidos')
-      .select('id, mesa, estado, created_at, detalles_pedido (cantidad, platos (nombre))')
+      .select('id, mesa, total, estado, created_at, detalles_pedido (cantidad, precio_unitario, platos (nombre, precio))')
       .in('estado', ['pendiente', 'entregado'])
       .gte('created_at', `${hoyLocal} 00:00:00`)
       .lte('created_at', `${hoyLocal} 23:59:59`)
@@ -78,6 +79,24 @@ export default function CocinaPage() {
     obtenerPedidosDelDia();
   };
 
+  const ejecutarEliminarPedido = async () => {
+    if (!pedidoAEliminar) return;
+    setEliminando(true);
+
+    try {
+      await supabase.from('detalles_pedido').delete().eq('pedido_id', pedidoAEliminar.id);
+      await supabase.from('pedidos').delete().eq('id', pedidoAEliminar.id);
+      
+      setPedidoAEliminar(null);
+      obtenerPedidosDelDia();
+    } catch (error) {
+      console.error(error);
+      alert('Hubo un error al intentar eliminar la comanda.');
+    } finally {
+      setEliminando(false);
+    }
+  };
+
   const desglosarCabeceraPedido = (textoMesa: string) => {
     let rawMesa = textoMesa;
     let esParaLlevar = false;
@@ -98,7 +117,6 @@ export default function CocinaPage() {
     }
     if (textoMesa.includes('Especificaciones:')) {
       const parteEspecificaciones = textoMesa.split('Especificaciones:')[1].replace(']', '').trim();
-      // Separa tanto por barra (|) como por coma (,) para que cada Tonga o Almuerzo sea una fila individual
       especificaciones = parteEspecificaciones
         .split(/,|\|/)
         .map(s => s.trim())
@@ -166,7 +184,7 @@ export default function CocinaPage() {
         </div>
       )}
 
-      <header className="border-b border-slate-800 pb-4 mb-6 flex justify-between items-center">
+      <header className="border-b border-slate-800 pb-4 mb-6 flex justify-between items-center max-w-7xl mx-auto">
         <h1 className="text-2xl font-black tracking-tight text-slate-100 flex items-center gap-2">
           🍳 Monitor de Cocina <span className="text-emerald-400 font-medium text-sm bg-emerald-950/60 px-3 py-1 rounded-xl border border-emerald-900/50">Flujo General Diario</span>
         </h1>
@@ -179,7 +197,7 @@ export default function CocinaPage() {
           <span>No se registran pedidos en el sistema para el día de hoy.</span>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           {pedidos.map((p) => {
             const { numeroMesa, esParaLlevar, mesera, especificaciones, adicionales } = desglosarCabeceraPedido(p.mesa);
             const hora = new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -221,30 +239,54 @@ export default function CocinaPage() {
                         <User className="h-2.5 w-2.5" /> {mesera}
                       </span>
                     </div>
-                    <span className="text-xs bg-slate-900 px-2.5 py-1.5 rounded-xl text-slate-400 font-mono font-bold flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5 text-amber-500" /> {hora}
-                    </span>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-slate-900 px-2.5 py-1.5 rounded-xl text-slate-400 font-mono font-bold flex items-center gap-1 border border-slate-700/60">
+                        <Clock className="h-3.5 w-3.5 text-amber-500" /> {hora}
+                      </span>
+                      {/* BOTÓN ELIMINAR COMANDA */}
+                      <button
+                        onClick={() => setPedidoAEliminar({ id: p.id, mesa: numeroMesa, total: Number(p.total) })}
+                        className="p-1.5 bg-red-950/40 border border-red-800/60 text-red-400 hover:text-white hover:bg-red-600 rounded-xl transition"
+                        title="Eliminar comanda"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="p-4 space-y-3">
-  {/* Solo mostramos Platos a Servir en pedidos simples (sin detalles de almuerzo/tonga) */}
-  {especificaciones.length === 0 && (
-    <div>
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Platos a Servir</p>
-      <div className="space-y-2">
-        {p.detalles_pedido?.map((det, idx) => (
-          <div key={idx} className="flex justify-between items-start text-sm bg-slate-900/40 p-2.5 border border-slate-700/30 rounded-xl">
-            <p className={`font-bold capitalize ${estaDespachado ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
-              • {det.platos?.nombre}
-            </p>
-            <span className={`font-black text-xs px-2 py-0.5 rounded-lg shrink-0 ${estaDespachado ? 'bg-slate-800 text-slate-500 border border-slate-700' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
-              x{det.cantidad}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )}
+                    {/* LISTA DE PLATOS CON PRECIOS */}
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Platos y Productos</p>
+                      <div className="space-y-1.5">
+                        {p.detalles_pedido?.map((det, idx) => {
+                          const precioUnit = Number(det.precio_unitario || det.platos?.precio || 0);
+                          const subtotal = precioUnit * det.cantidad;
+
+                          return (
+                            <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/50 p-2.5 border border-slate-700/40 rounded-xl">
+                              <div className="min-w-0 pr-2">
+                                <p className={`font-bold capitalize ${estaDespachado ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                                  • {det.platos?.nombre}
+                                </p>
+                                <span className="text-[10px] text-slate-400 font-mono font-semibold">
+                                  ${precioUnit.toFixed(2)} c/u
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={`font-black text-xs px-2 py-0.5 rounded-lg ${estaDespachado ? 'bg-slate-800 text-slate-500 border border-slate-700' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                                  x{det.cantidad}
+                                </span>
+                                <span className="font-mono font-black text-xs text-slate-300">
+                                  ${subtotal.toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
 
                     {adicionales && adicionales.length > 0 && (
                       <div className="mt-3 space-y-1">
@@ -259,12 +301,20 @@ export default function CocinaPage() {
 
                     {especificaciones.length > 0 && (
                       <div className="mt-4 border-t border-dashed border-slate-700 pt-3">
-                        <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-1.5">Detalles del Pedido:</p>
+                        <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-1.5">Detalles / Presas del Pedido:</p>
                         <div className="flex flex-col gap-1">
                           {templatesTexto(especificaciones)}
                         </div>
                       </div>
                     )}
+
+                    {/* TOTAL DESTACADO */}
+                    <div className="mt-3 pt-2.5 border-t border-slate-700/80 flex justify-between items-center bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/40">
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-400">Total a Cobrar:</span>
+                      <span className="text-base font-black text-emerald-400 font-mono flex items-center">
+                        <DollarSign className="h-4 w-4" />{Number(p.total).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -291,6 +341,7 @@ export default function CocinaPage() {
         </div>
       )}
 
+      {/* MODAL CONFIRMAR DESPACHO */}
       {pedidoAConfirmar && (() => {
         const { numeroMesa, esParaLlevar, mesera, especificaciones, adicionales } = desglosarCabeceraPedido(pedidoAConfirmar.mesa);
 
@@ -322,20 +373,14 @@ export default function CocinaPage() {
               </div>
 
               <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-  {/* Ocultamos el resumen simple si el pedido ya tiene detalles específicos */}
-  {especificaciones.length === 0 && (
-    <div>
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Resumen de platos</p>
-      <div className="space-y-1.5">
-        {pedidoAConfirmar.detalles_pedido?.map((det, idx) => (
-          <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/50 p-2 rounded-lg border border-slate-750">
-            <span className="font-bold text-slate-200 capitalize">{det.platos?.nombre}</span>
-            <span className="bg-emerald-500/10 text-emerald-400 font-black px-2 py-0.5 rounded">x{det.cantidad}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )}
+                <div className="space-y-1.5">
+                  {pedidoAConfirmar.detalles_pedido?.map((det, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs bg-slate-900/50 p-2 rounded-lg border border-slate-750">
+                      <span className="font-bold text-slate-200 capitalize">{det.platos?.nombre}</span>
+                      <span className="bg-emerald-500/10 text-emerald-400 font-black px-2 py-0.5 rounded">x{det.cantidad}</span>
+                    </div>
+                  ))}
+                </div>
 
                 {adicionales && adicionales.length > 0 && (
                   <div className="mt-2 space-y-1">
@@ -359,6 +404,11 @@ export default function CocinaPage() {
                 )}
               </div>
 
+              <div className="border-t border-slate-700/60 pt-3 flex justify-between items-center font-black text-sm">
+                <span className="text-slate-400 uppercase text-xs">Total:</span>
+                <span className="text-emerald-400 font-mono text-base">${Number(pedidoAConfirmar.total).toFixed(2)}</span>
+              </div>
+
               <div className="flex items-center gap-3 pt-2 font-bold text-xs uppercase border-t border-slate-700/60">
                 <button 
                   onClick={() => setPedidoAConfirmar(null)}
@@ -379,13 +429,53 @@ export default function CocinaPage() {
         );
       })()}
 
+      {/* MODAL CENTRAL CONFIRMAR ELIMINACIÓN */}
+      {pedidoAEliminar && (
+        <div className="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4 text-left animate-in zoom-in-95 duration-200 text-white">
+            <div className="flex items-center space-x-3 text-red-400">
+              <div className="p-2 bg-red-950/50 rounded-xl border border-red-900/50">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white">¿Eliminar Comanda?</h3>
+                <p className="text-xs text-slate-400 font-medium">Esta acción no se puede deshacer.</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-700 text-xs text-slate-300 space-y-1">
+              <p>Mesa / Cliente: <strong className="text-white font-black uppercase text-sm block">{pedidoAEliminar.mesa}</strong></p>
+              <p>Monto: <strong className="text-emerald-400 font-mono font-bold">${pedidoAEliminar.total.toFixed(2)}</strong></p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2 font-bold text-xs uppercase">
+              <button
+                type="button"
+                onClick={() => setPedidoAEliminar(null)}
+                disabled={eliminando}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 py-3 rounded-xl transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={ejecutarEliminarPedido}
+                disabled={eliminando}
+                className="w-full bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl transition shadow-lg shadow-red-950/40"
+              >
+                {eliminando ? 'Borrando...' : 'Sí, Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
 function templatesTexto(spec: string[]) {
   return spec.map((item, index) => {
-    // Si el texto viene como "1x Tonga..." extrae la cantidad para ponerla en un botón/badge destacado
     const partes = item.trim().split(/\s+(.+)/);
     const tieneCantidad = partes[0] && partes[0].match(/^\d+x$/i);
     const cantidad = tieneCantidad ? partes[0].toUpperCase() : null;
