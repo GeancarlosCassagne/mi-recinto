@@ -323,6 +323,7 @@ export default function ClientMenu() {
     });
   };
 
+  // 🟢 TONGA: SIN SUMAR 0.25 EN LLEVAR Y ETIQUETA [PARA LLEVAR]
   const finalizarTonga = (presa: string) => {
     if (!tongaSeleccionada) return;
 
@@ -333,8 +334,7 @@ export default function ClientMenu() {
 
     if (esTonga) {
       const esGranja = tipoGallina.toLowerCase().includes('granja');
-      precioBase = esGranja ? 2.75 : 5.00;
-      if (tipoEntrega === 'llevar') precioBase += 0.25;
+      precioBase = esGranja ? 2.75 : 5.00; // NO se suman 0.25 a la Tonga
     } else {
       if (tipoEntrega === 'llevar') {
         precioBase += 0.25;
@@ -342,7 +342,7 @@ export default function ClientMenu() {
     }
 
     const prefijoTipo = esTonga && tipoGallina ? `${tipoGallina} ` : '';
-    const detalles = `(${prefijoTipo}${presa})${tipoEntrega === 'llevar' ? ' [TARRINA]' : ''}`;
+    const detalles = `(${prefijoTipo}${presa})${tipoEntrega === 'llevar' ? ' [PARA LLEVAR]' : ''}`;
     const idUnico = `${tongaSeleccionada.id}-${detalles.replace(/\s+/g, '-')}`;
 
     const platoConPrecioCalculado = {
@@ -364,7 +364,6 @@ export default function ClientMenu() {
     setTongaSeleccionada(null);
   };
 
-  // 🟢 1. SELECCIONAR TIPO DE ALMUERZO -> PRIMERO A CALDO (O SEGUNDO SI ES SOLO SEGUNDO)
   const seleccionarTipoAlmuerzo = (tipo: 'completo' | 'segundo' | 'caldo') => {
     let basePrecio = 3.00;
     if (tipo === 'segundo') basePrecio = 2.50;
@@ -378,12 +377,10 @@ export default function ClientMenu() {
     if (tipo === 'segundo') {
       setPasoAlmuerzo('segundo');
     } else {
-      // Completo o Solo Caldo empieza siempre en Caldo
       setPasoAlmuerzo('caldo');
     }
   };
 
-  // 🟢 2. SELECCIONAR CALDO -> LUEGO A SEGUNDO (SI ES COMPLETO) O A BEBIDA (SI ES SOLO CALDO)
   const seleccionarCaldoAlmuerzo = (nombreCaldo: string) => {
     setSopaElegida(nombreCaldo);
     if (tipoAlmuerzo === 'completo') {
@@ -393,7 +390,6 @@ export default function ClientMenu() {
     }
   };
 
-  // 🟢 3. SELECCIONAR SEGUNDO -> LUEGO A BEBIDA (O PRESA SI ES HORNADO)
   const seleccionarSegundoAlmuerzo = (nombreSegundo: string) => {
     const esHornado = nombreSegundo.toLowerCase().includes('hornado') || nombreSegundo.toLowerCase().includes('horneado');
     
@@ -411,14 +407,13 @@ export default function ClientMenu() {
     setPasoAlmuerzo('bebida');
   };
 
-  // 🟢 4. FINALIZAR CON LA BEBIDA
   const finalizarAlmuerzo = (bebidaFinal: string) => {
     if (!almuerzoSeleccionado) return;
 
     mostrarCheckCentral('Añadido');
 
     let detalles = '';
-    const tagLlevar = tipoEntrega === 'llevar' ? ' [TARRINA]' : '';
+    const tagLlevar = tipoEntrega === 'llevar' ? ' [PARA LLEVAR]' : '';
     
     if (tipoAlmuerzo === 'completo') {
       detalles = `Completo: ${segundoElegido} + ${sopaElegida} + ${bebidaFinal}${tagLlevar}`;
@@ -842,7 +837,7 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* 🟢 MODAL CONFIGURADOR ALMUERZO DIARIO: ORDEN (CALDO -> SEGUNDO -> JUGO) */}
+        {/* MODAL CONFIGURADOR ALMUERZO DIARIO */}
         {configurandoAlmuerzo && (
           <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4 transition-all duration-200">
             <div className="flex justify-between items-center border-b border-emerald-100 pb-3">
@@ -850,7 +845,6 @@ export default function ClientMenu() {
               <button onClick={() => setConfigurandoAlmuerzo(false)} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
             </div>
 
-            {/* PASO 1: SELECCIONAR TIPO DE ALMUERZO */}
             {pasoAlmuerzo === 'tipo' && (
               <div>
                 <p className="text-xs font-bold text-gray-500 uppercase mb-3">1. Selecciona el tipo de servicio:</p>
@@ -862,7 +856,6 @@ export default function ClientMenu() {
               </div>
             )}
 
-            {/* PASO 2: SELECCIONAR CALDO / SOPA */}
             {pasoAlmuerzo === 'caldo' && (
               <div>
                 <p className="text-xs font-bold text-gray-500 uppercase mb-3">2. Selecciona la Sopa / Caldo de hoy:</p>
@@ -899,7 +892,6 @@ export default function ClientMenu() {
               </div>
             )}
 
-            {/* PASO 3: SELECCIONAR SEGUNDO / PLATO FUERTE */}
             {pasoAlmuerzo === 'segundo' && (
               <div>
                 <p className="text-xs font-bold text-gray-500 uppercase mb-1">
@@ -934,7 +926,6 @@ export default function ClientMenu() {
               </div>
             )}
 
-            {/* PASO 3.1: PRESA DE POLLO HORNADO */}
             {pasoAlmuerzo === 'presa_segundo' && (
               <div>
                 <p className="text-xs font-bold text-emerald-800 uppercase mb-1">Selecciona la presa para el Pollo Hornado:</p>
@@ -968,7 +959,6 @@ export default function ClientMenu() {
               </div>
             )}
 
-            {/* PASO 4: SELECCIONAR JUGO DEL DÍA */}
             {pasoAlmuerzo === 'bebida' && (
               <div>
                 <p className="text-xs font-bold text-gray-500 uppercase mb-1">

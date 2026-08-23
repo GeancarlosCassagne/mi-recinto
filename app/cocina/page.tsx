@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { CheckCircle, Clock, User, Bike, UtensilsCrossed, AlertCircle, AlertTriangle, Lock, Trash2, DollarSign, Utensils, Soup, Drumstick, Coffee, Tag } from 'lucide-react';
+import { CheckCircle, Clock, User, Bike, UtensilsCrossed, AlertCircle, AlertTriangle, Lock, Trash2, DollarSign, Utensils, Soup, Drumstick, Coffee, Tag, Check } from 'lucide-react';
 
 interface DetallePedido {
   cantidad: number;
@@ -40,6 +40,16 @@ export default function CocinaPage() {
   const [pedidoAConfirmar, setPedidoAConfirmar] = useState<Pedido | null>(null);
   const [pedidoAEliminar, setPedidoAEliminar] = useState<{ id: string; mesa: string; total: number } | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  
+  // 🟢 ESTADO PARA GUARDAR ÍTEMS TACHADOS INTERACTIVAMENTE EN COCINA
+  const [tachados, setTachados] = useState<Record<string, boolean>>({});
+
+  const alternarTachado = (claveUnica: string) => {
+    setTachados(prev => ({
+      ...prev,
+      [claveUnica]: !prev[claveUnica]
+    }));
+  };
 
   const obtenerPedidosDelDia = async () => {
     const d = new Date();
@@ -139,7 +149,7 @@ export default function CocinaPage() {
     return { numeroMesa: rawMesa, esParaLlevar, mesera, especificaciones, adicionales };
   };
 
-  // 🟢 Clasificador con precios fijos según tipo y recargo para llevar
+  // 🟢 Clasificador con precios fijos y TONGA SIN RECARGO
   const clasificarItemsComanda = (especificaciones: string[], detalles: DetallePedido[], esParaLlevar: boolean) => {
     const completos: { texto: string; cantidad: string; precio: number }[] = [];
     const segundos: { texto: string; cantidad: string; precio: number }[] = [];
@@ -168,7 +178,8 @@ export default function CocinaPage() {
           caldos.push({ texto: textoDetalle, cantidad: cantidadStr, precio: precioCalculado });
         } else if (textoMin.includes('tonga')) {
           const esGranja = textoMin.includes('granja');
-          const baseTonga = esGranja ? (esParaLlevar ? 3.00 : 2.75) : (esParaLlevar ? 5.25 : 5.00);
+          // Tonga NO tiene recargo en llevar
+          const baseTonga = esGranja ? 2.75 : 5.00;
           precioCalculado = baseTonga * cantidadNum;
           segundos.push({ texto: textoDetalle, cantidad: cantidadStr, precio: precioCalculado });
         } else if (textoMin.includes('caldo criollo')) {
@@ -217,8 +228,8 @@ export default function CocinaPage() {
     return { completos, segundos, caldos, bebidasYExtras };
   };
 
-  // 🟢 Renderizado con preservación de paréntesis de presas y sanitización
-  const renderItemTextoLimpio = (texto: string) => {
+  // 🟢 Renderizado con soporte para tachar individualmente
+  const renderItemTextoLimpio = (texto: string, pedidoId: string, idxGeneral: number | string) => {
     let titulo = texto;
     let componentes: string[] = [];
 
@@ -243,20 +254,41 @@ export default function CocinaPage() {
       titulo = textoLimpio;
     }
 
+    const claveTitulo = `${pedidoId}-tit-${idxGeneral}`;
+    const estaTachadoTitulo = !!tachados[claveTitulo];
+
     return (
       <div className="flex-1 min-w-0">
-        <p className="font-extrabold text-white text-xs capitalize leading-tight">
+        <p 
+          onClick={() => alternarTachado(claveTitulo)}
+          className={`font-extrabold text-xs capitalize leading-tight cursor-pointer select-none transition-all ${
+            estaTachadoTitulo ? 'line-through text-slate-500 opacity-50' : 'text-white hover:text-emerald-300'
+          }`}
+          title="Click para tachar / destachar"
+        >
           {titulo}
         </p>
 
         {componentes.length > 0 && (
           <div className="mt-1 space-y-0.5 pl-1 border-l-2 border-slate-700">
-            {componentes.map((comp, i) => (
-              <p key={i} className="text-[11px] font-medium text-slate-300 capitalize flex items-center gap-1.5">
-                <span className="text-emerald-400 text-[10px]">•</span>
-                <span>{comp}</span>
-              </p>
-            ))}
+            {componentes.map((comp, i) => {
+              const claveComp = `${pedidoId}-sub-${idxGeneral}-${i}`;
+              const estaTachadoComp = !!tachados[claveComp];
+
+              return (
+                <p 
+                  key={i} 
+                  onClick={() => alternarTachado(claveComp)}
+                  className={`text-[11px] font-medium capitalize flex items-center gap-1.5 cursor-pointer select-none transition-all ${
+                    estaTachadoComp ? 'line-through text-slate-600 opacity-50' : 'text-slate-300 hover:text-emerald-300'
+                  }`}
+                  title="Click para tachar componente"
+                >
+                  <span className={`text-[10px] ${estaTachadoComp ? 'text-slate-600' : 'text-emerald-400'}`}>•</span>
+                  <span>{comp}</span>
+                </p>
+              );
+            })}
           </div>
         )}
       </div>
@@ -312,7 +344,7 @@ export default function CocinaPage() {
         <h1 className="text-2xl font-black tracking-tight text-slate-100 flex items-center gap-2">
           🍳 Monitor de Cocina <span className="text-emerald-400 font-medium text-sm bg-emerald-950/60 px-3 py-1 rounded-xl border border-emerald-900/50">Flujo General Diario</span>
         </h1>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Órdenes Sincronizadas</p>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Toca cualquier ítem para tacharlo</p>
       </header>
 
       {pedidos.length === 0 ? (
@@ -346,7 +378,7 @@ export default function CocinaPage() {
                   ) : esParaLlevar ? (
                     <div className="bg-rose-600 text-white font-black text-sm uppercase px-4 py-3 tracking-wider flex items-center justify-center gap-2 shadow-inner animate-pulse">
                       <Bike className="h-5 w-5 stroke-[3]" />
-                      <span>¡Para Llevar / Tarrina!</span>
+                      <span>¡Para Llevar!</span>
                     </div>
                   ) : (
                     <div className="bg-emerald-600 text-white font-black text-sm uppercase px-4 py-3 tracking-wider flex items-center justify-center gap-2 shadow-inner">
@@ -380,69 +412,15 @@ export default function CocinaPage() {
                     </div>
                   </div>
 
-                  {/* CUERPO CON CASILLEROS DE COLORES DIFERENCIADOS */}
+                  {/* CUERPO: 1° CALDOS -> 2° SEGUNDOS -> 3° COMPLETOS -> 4° BEBIDAS -> 5° ADICIONALES */}
                   <div className="p-4 space-y-3.5">
 
-                    {/* 1. CASILLERO VERDE ESMERALDA: ALMUERZOS COMPLETOS */}
-                    {completos.length > 0 && (
-                      <div className="space-y-1.5 bg-emerald-950/30 border border-emerald-700/60 p-2.5 rounded-2xl shadow-sm">
-                        <div className="flex items-center gap-1.5 text-emerald-300 font-black text-[11px] uppercase tracking-wider border-b border-emerald-700/50 pb-1">
-                          <Utensils className="h-3.5 w-3.5 text-emerald-400" />
-                          <span>Almuerzos Completos</span>
-                        </div>
-                        <div className="space-y-1.5 pt-1">
-                          {completos.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-start text-xs bg-emerald-950/70 border border-emerald-600/40 p-2.5 rounded-xl text-slate-100 shadow-sm gap-2">
-                              <div className="flex items-start gap-2 min-w-0 flex-1">
-                                <span className="bg-emerald-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
-                                  {item.cantidad}
-                                </span>
-                                {renderItemTextoLimpio(item.texto)}
-                              </div>
-                              {item.precio > 0 && (
-                                <span className="font-mono font-black text-xs text-emerald-300 shrink-0 mt-0.5">
-                                  ${item.precio.toFixed(2)}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 2. CASILLERO ÁMBAR / CÁLIDO: SEGUNDOS, FUERTES Y TONGAS */}
-                    {segundos.length > 0 && (
-                      <div className="space-y-1.5 bg-amber-950/30 border border-amber-700/60 p-2.5 rounded-2xl shadow-sm">
-                        <div className="flex items-center gap-1.5 text-amber-300 font-black text-[11px] uppercase tracking-wider border-b border-amber-700/50 pb-1">
-                          <Drumstick className="h-3.5 w-3.5 text-amber-400" />
-                          <span>Solo Segundos / Fuertes / Tongas</span>
-                        </div>
-                        <div className="space-y-1.5 pt-1">
-                          {segundos.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-start text-xs bg-amber-950/70 border border-amber-600/40 p-2.5 rounded-xl text-slate-100 shadow-sm gap-2">
-                              <div className="flex items-start gap-2 min-w-0 flex-1">
-                                <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
-                                  {item.cantidad}
-                                </span>
-                                {renderItemTextoLimpio(item.texto)}
-                              </div>
-                              {item.precio > 0 && (
-                                <span className="font-mono font-black text-xs text-amber-300 shrink-0 mt-0.5">
-                                  ${item.precio.toFixed(2)}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 3. CASILLERO AZUL / CYAN: CALDOS Y SOPAS */}
+                    {/* 🟢 1. CASILLERO AZUL: CALDOS Y SOPAS (PRIMERO EN SALIR) */}
                     {caldos.length > 0 && (
                       <div className="space-y-1.5 bg-blue-950/30 border border-blue-700/60 p-2.5 rounded-2xl shadow-sm">
                         <div className="flex items-center gap-1.5 text-cyan-300 font-black text-[11px] uppercase tracking-wider border-b border-blue-700/50 pb-1">
                           <Soup className="h-3.5 w-3.5 text-cyan-400" />
-                          <span>Solo Caldos / Sopas</span>
+                          <span>1. Caldos y Sopas</span>
                         </div>
                         <div className="space-y-1.5 pt-1">
                           {caldos.map((item, idx) => (
@@ -451,7 +429,7 @@ export default function CocinaPage() {
                                 <span className="bg-cyan-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
                                   {item.cantidad}
                                 </span>
-                                {renderItemTextoLimpio(item.texto)}
+                                {renderItemTextoLimpio(item.texto, p.id, `caldo-${idx}`)}
                               </div>
                               {item.precio > 0 && (
                                 <span className="font-mono font-black text-xs text-cyan-300 shrink-0 mt-0.5">
@@ -464,43 +442,123 @@ export default function CocinaPage() {
                       </div>
                     )}
 
-                    {/* 4. CASILLERO VIOLETA / PIZARRA: BEBIDAS Y EXTRAS */}
-                    {bebidasYExtras.length > 0 && (
-                      <div className="space-y-1.5 bg-purple-950/30 border border-purple-700/60 p-2.5 rounded-2xl shadow-sm">
-                        <div className="flex items-center gap-1.5 text-purple-300 font-black text-[11px] uppercase tracking-wider border-b border-purple-700/50 pb-1">
-                          <Coffee className="h-3.5 w-3.5 text-purple-400" />
-                          <span>Bebidas / Extras Sueltos</span>
+                    {/* 🟢 2. CASILLERO ÁMBAR: SEGUNDOS, FUERTES Y TONGAS */}
+                    {segundos.length > 0 && (
+                      <div className="space-y-1.5 bg-amber-950/30 border border-amber-700/60 p-2.5 rounded-2xl shadow-sm">
+                        <div className="flex items-center gap-1.5 text-amber-300 font-black text-[11px] uppercase tracking-wider border-b border-amber-700/50 pb-1">
+                          <Drumstick className="h-3.5 w-3.5 text-amber-400" />
+                          <span>2. Segundos / Fuertes / Tongas</span>
                         </div>
                         <div className="space-y-1.5 pt-1">
-                          {bebidasYExtras.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-center text-xs bg-purple-950/70 border border-purple-600/40 p-2.5 rounded-xl shadow-sm">
-                              <span className="font-bold capitalize text-slate-200">• {item.texto}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="bg-purple-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px]">{item.cantidad}</span>
-                                <span className="font-mono font-black text-xs text-purple-300">${item.precio.toFixed(2)}</span>
+                          {segundos.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-start text-xs bg-amber-950/70 border border-amber-600/40 p-2.5 rounded-xl text-slate-100 shadow-sm gap-2">
+                              <div className="flex items-start gap-2 min-w-0 flex-1">
+                                <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
+                                  {item.cantidad}
+                                </span>
+                                {renderItemTextoLimpio(item.texto, p.id, `segundo-${idx}`)}
                               </div>
+                              {item.precio > 0 && (
+                                <span className="font-mono font-black text-xs text-amber-300 shrink-0 mt-0.5">
+                                  ${item.precio.toFixed(2)}
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {/* 🟢 CASILLERO DE ADICIONALES (CON PALABRA "ADICIONAL:" EN LUGAR DE "+") */}
+                    {/* 🟢 3. CASILLERO VERDE: ALMUERZOS COMPLETOS */}
+                    {completos.length > 0 && (
+                      <div className="space-y-1.5 bg-emerald-950/30 border border-emerald-700/60 p-2.5 rounded-2xl shadow-sm">
+                        <div className="flex items-center gap-1.5 text-emerald-300 font-black text-[11px] uppercase tracking-wider border-b border-emerald-700/50 pb-1">
+                          <Utensils className="h-3.5 w-3.5 text-emerald-400" />
+                          <span>3. Almuerzos Completos</span>
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          {completos.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-start text-xs bg-emerald-950/70 border border-emerald-600/40 p-2.5 rounded-xl text-slate-100 shadow-sm gap-2">
+                              <div className="flex items-start gap-2 min-w-0 flex-1">
+                                <span className="bg-emerald-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px] shrink-0 mt-0.5">
+                                  {item.cantidad}
+                                </span>
+                                {renderItemTextoLimpio(item.texto, p.id, `completo-${idx}`)}
+                              </div>
+                              {item.precio > 0 && (
+                                <span className="font-mono font-black text-xs text-emerald-300 shrink-0 mt-0.5">
+                                  ${item.precio.toFixed(2)}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🟢 4. CASILLERO VIOLETA: BEBIDAS Y EXTRAS */}
+                    {bebidasYExtras.length > 0 && (
+                      <div className="space-y-1.5 bg-purple-950/30 border border-purple-700/60 p-2.5 rounded-2xl shadow-sm">
+                        <div className="flex items-center gap-1.5 text-purple-300 font-black text-[11px] uppercase tracking-wider border-b border-purple-700/50 pb-1">
+                          <Coffee className="h-3.5 w-3.5 text-purple-400" />
+                          <span>4. Bebidas / Extras Sueltos</span>
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          {bebidasYExtras.map((item, idx) => {
+                            const claveBebida = `${p.id}-bebida-${idx}`;
+                            const estaTachada = !!tachados[claveBebida];
+
+                            return (
+                              <div key={idx} className="flex justify-between items-center text-xs bg-purple-950/70 border border-purple-600/40 p-2.5 rounded-xl shadow-sm">
+                                <span 
+                                  onClick={() => alternarTachado(claveBebida)}
+                                  className={`font-bold capitalize cursor-pointer select-none transition-all ${
+                                    estaTachada ? 'line-through text-slate-500 opacity-50' : 'text-slate-200 hover:text-purple-300'
+                                  }`}
+                                  title="Click para tachar"
+                                >
+                                  • {item.texto}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="bg-purple-500 text-slate-950 font-black px-2 py-0.5 rounded-md text-[11px]">{item.cantidad}</span>
+                                  <span className="font-mono font-black text-xs text-purple-300">${item.precio.toFixed(2)}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🟢 5. CASILLERO ROSA: NOTAS Y ADICIONALES */}
                     {adicionales && adicionales.length > 0 && (
                       <div className="space-y-1.5 bg-rose-950/30 border border-rose-800/60 p-2.5 rounded-2xl shadow-sm">
                         <div className="flex items-center gap-1.5 text-rose-300 font-black text-[11px] uppercase tracking-wider border-b border-rose-800/50 pb-1">
                           <Tag className="h-3.5 w-3.5 text-rose-400" />
-                          <span>Notas y Adicionales del Pedido</span>
+                          <span>5. Notas y Adicionales</span>
                         </div>
                         <div className="space-y-1.5 pt-1">
-                          {adicionales.map((item, index) => (
-                            <div key={index} className="bg-rose-950/70 border border-rose-700/40 p-2.5 rounded-xl text-xs font-bold text-rose-200 capitalize flex items-center gap-2 shadow-sm">
-                              <span className="bg-rose-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0">
-                                Adicional:
-                              </span>
-                              <span className="truncate">{item}</span>
-                            </div>
-                          ))}
+                          {adicionales.map((item, index) => {
+                            const claveExtra = `${p.id}-extra-${index}`;
+                            const estaTachadoExtra = !!tachados[claveExtra];
+
+                            return (
+                              <div key={index} className="bg-rose-950/70 border border-rose-700/40 p-2.5 rounded-xl text-xs font-bold text-rose-200 capitalize flex items-center gap-2 shadow-sm">
+                                <span className="bg-rose-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0">
+                                  Adicional:
+                                </span>
+                                <span 
+                                  onClick={() => alternarTachado(claveExtra)}
+                                  className={`truncate cursor-pointer select-none transition-all ${
+                                    estaTachadoExtra ? 'line-through text-slate-500 opacity-50' : 'hover:text-rose-100'
+                                  }`}
+                                  title="Click para tachar"
+                                >
+                                  {item}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
