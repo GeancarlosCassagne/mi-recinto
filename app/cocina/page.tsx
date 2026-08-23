@@ -206,25 +206,26 @@ export default function CocinaPage() {
     let titulo = texto;
     let componentes: string[] = [];
 
-    // Limpieza de prefijos y dobles paréntesis redundantes
+    // 1. Limpieza de prefijos y dobles paréntesis redundantes
     let textoLimpio = texto
       .replace(/Almuerzo Del Día/gi, '')
       .replace(/\(\(/g, '(')
       .replace(/\)\)/g, ')')
       .trim();
 
-    if (textoLimpio.toLowerCase().includes('completo:')) {
-      titulo = 'Almuerzo Completo';
-      const parteInterna = textoLimpio.split(/completo:/i)[1]?.replace(/\)+$/, '').trim() || '';
-      componentes = parteInterna.split('+').map(s => s.trim().replace(/\)+$/, '')).filter(Boolean);
-    } else if (textoLimpio.toLowerCase().includes('solo segundo:')) {
-      titulo = 'Solo Segundo';
-      const parteInterna = textoLimpio.split(/solo segundo:/i)[1]?.replace(/\)+$/, '').trim() || '';
-      componentes = parteInterna.split('+').map(s => s.trim().replace(/\)+$/, '')).filter(Boolean);
-    } else if (textoLimpio.toLowerCase().includes('solo caldo:')) {
-      titulo = 'Solo Caldo';
-      const parteInterna = textoLimpio.split(/solo caldo:/i)[1]?.replace(/\)+$/, '').trim() || '';
-      componentes = parteInterna.split('+').map(s => s.trim().replace(/\)+$/, '')).filter(Boolean);
+    // 2. Extracción precisa de componentes del almuerzo
+    const regexAlmuerzo = /\((Completo|Solo Segundo|Solo Caldo):\s*(.*?)\)$/i;
+    const match = textoLimpio.match(regexAlmuerzo);
+
+    if (match) {
+      const tipo = match[1].toLowerCase();
+      titulo = tipo === 'completo' ? 'Almuerzo Completo' : tipo === 'solo segundo' ? 'Solo Segundo' : 'Solo Caldo';
+      
+      // Separamos por '+' sin romper los paréntesis internos de las presas
+      componentes = match[2]
+        .split('+')
+        .map(s => s.trim())
+        .filter(Boolean);
     } else {
       titulo = textoLimpio;
     }
