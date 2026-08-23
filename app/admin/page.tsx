@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { PlusCircle, DollarSign, Calendar, ClipboardList, Lock, X, Trash2, CheckSquare, Square, User, Eye, EyeOff, Clock } from 'lucide-react';
+import { PlusCircle, DollarSign, Calendar, ClipboardList, Lock, X, Trash2, CheckSquare, Square, User, Eye, EyeOff, Clock, Milk } from 'lucide-react';
 
 interface Plato {
   id: string;
@@ -215,7 +215,6 @@ export default function AdminPage() {
     const n = nombrePlato.toLowerCase();
     return catPlato === 'fijo' || 
            catPlato === 'bebida' ||
-           catPlato === 'jugo' ||
            catPlato === 'presa_criolla' ||
            catPlato === 'presa_granja' ||
            catPlato === 'presa_caldo' ||
@@ -223,8 +222,7 @@ export default function AdminPage() {
            n.includes('caldo criollo') ||
            n.includes('seco criollo') ||
            n.includes('almuerzo del día') || 
-           n.includes('cola pequeña') || 
-           n.includes('cola grande') || 
+           n.includes('cola') || 
            n.includes('botella de agua');
   };
 
@@ -329,6 +327,11 @@ export default function AdminPage() {
     p.categoria !== 'presa_caldo'
   );
 
+  // 🟢 Jugos marcados actualmente en el menú diario
+  const jugosSeleccionadosDelDia = platos.filter(p => 
+    p.categoria === 'jugo' && platosSeleccionados.includes(p.id)
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-6 grid grid-cols-1 md:grid-cols-3 gap-8 w-full text-gray-900 max-w-7xl mx-auto">
       
@@ -387,7 +390,7 @@ export default function AdminPage() {
         <button onClick={manejarCierreCaja} className={`w-full sm:w-auto font-bold text-xs uppercase px-6 py-3.5 rounded-xl text-white ${estadoCaja === 'abierta' ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-700 hover:bg-slate-800'}`}>{estadoCaja === 'abierta' ? 'Finalizar Jornada' : 'Habilitar Jornada'}</button>
       </div>
 
-      {/* COLUMNA IZQUIERDA: FORMULARIO + MÓDULOS DE DISPONIBILIDAD DE COCINA */}
+      {/* COLUMNA IZQUIERDA: FORMULARIO + MÓDULOS DE DISPONIBILIDAD */}
       <div className="space-y-6">
         <div className="bg-white rounded-2xl border border-gray-200 p-6 h-fit shadow-sm space-y-6">
           <div>
@@ -415,13 +418,48 @@ export default function AdminPage() {
             </form>
           </div>
 
-          {/* MÓDULOS DE DISPONIBILIDAD DE PRESAS */}
+          {/* MÓDULOS DE DISPONIBILIDAD DE COCINA Y JUGOS */}
           <div className="border-t pt-5 space-y-4">
             <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">
-              Control de Presas por Cocina
+              Disponibilidad Activa de Cocina
             </h3>
 
             <div className="grid grid-cols-1 gap-3">
+              {/* 🟢 NUEVO: DISPONIBILIDAD REACTIVA DE JUGOS DEL DÍA */}
+              <div className="bg-purple-50/60 border border-purple-200 rounded-2xl p-3.5 space-y-2">
+                <div className="flex justify-between items-center border-b border-purple-200/60 pb-1.5">
+                  <h4 className="text-xs font-black text-purple-950 uppercase flex items-center gap-1.5">
+                    <Milk className="h-3.5 w-3.5 text-purple-700" /> Jugos del Día
+                  </h4>
+                  <span className="text-[9px] font-bold text-purple-800 bg-purple-100 px-2 py-0.5 rounded">
+                    {jugosSeleccionadosDelDia.length} Marcados
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {jugosSeleccionadosDelDia.length === 0 ? (
+                    <p className="text-[11px] text-gray-400 italic py-1 text-center">
+                      Marca jugos en el menú del día para controlar su disponibilidad.
+                    </p>
+                  ) : (
+                    jugosSeleccionadosDelDia.map((j) => (
+                      <div key={j.id} className="flex justify-between items-center text-xs p-2 bg-white rounded-xl border border-purple-100 shadow-sm">
+                        <span className="font-bold text-gray-800 capitalize">{j.nombre}</span>
+                        <button 
+                          type="button" 
+                          onClick={() => alternarDisponibilidad(j.id, j.disponible)}
+                          className={`p-1.5 rounded-lg border flex items-center justify-center transition-all ${
+                            j.disponible ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'
+                          }`}
+                          title={j.disponible ? 'Marcar como Agotado' : 'Marcar como Disponible'}
+                        >
+                          {j.disponible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
               {/* 1. PRESAS CRIOLLAS */}
               <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-3.5 space-y-2">
                 <div className="flex justify-between items-center border-b border-amber-200/60 pb-1.5">
@@ -682,7 +720,7 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {/* 🟢 MODAL HISTORIAL DE COMANDAS CON HORA EXACTA */}
+      {/* MODAL HISTORIAL DE COMANDAS */}
       {verDetalleModal && (
         <div className="fixed inset-0 bg-gray-950/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-xl relative border border-gray-100">
@@ -713,7 +751,6 @@ export default function AdminPage() {
                             <User className="h-3 w-3 text-emerald-700" /> {nombreMesera}
                           </span>
 
-                          {/* 🟢 HORA DEL PEDIDO */}
                           {horaPedido && (
                             <span className="text-[11px] bg-white border border-gray-200 px-2 py-0.5 rounded-lg text-gray-500 font-mono font-bold flex items-center gap-1 shadow-sm">
                               <Clock className="h-3 w-3 text-amber-500" /> {horaPedido}
