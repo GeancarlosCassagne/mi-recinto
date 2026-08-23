@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { PlusCircle, DollarSign, Calendar, ClipboardList, Lock, X, Trash2, CheckSquare, Square, User, Eye, EyeOff } from 'lucide-react';
+import { PlusCircle, DollarSign, Calendar, ClipboardList, Lock, X, Trash2, CheckSquare, Square, User, Eye, EyeOff, Clock } from 'lucide-react';
 
 interface Plato {
   id: string;
@@ -415,14 +415,14 @@ export default function AdminPage() {
             </form>
           </div>
 
-          {/* 🟢 MÓDULOS SEPARADOS DE DISPONIBILIDAD DE PRESAS */}
+          {/* MÓDULOS DE DISPONIBILIDAD DE PRESAS */}
           <div className="border-t pt-5 space-y-4">
             <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">
               Control de Presas por Cocina
             </h3>
 
             <div className="grid grid-cols-1 gap-3">
-              {/* 1. PRESAS CRIOLLAS (TONGA CRIOLLA + SECO CRIOLLO) */}
+              {/* 1. PRESAS CRIOLLAS */}
               <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-3.5 space-y-2">
                 <div className="flex justify-between items-center border-b border-amber-200/60 pb-1.5">
                   <h4 className="text-xs font-black text-amber-950 uppercase">🐓 Presas Criollas</h4>
@@ -446,7 +446,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* 2. PRESAS DE GRANJA (TONGA GRANJA + POLLO HORNEADO) */}
+              {/* 2. PRESAS DE GRANJA */}
               <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-3.5 space-y-2">
                 <div className="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
                   <h4 className="text-xs font-black text-emerald-950 uppercase">🍗 Presas Granja</h4>
@@ -470,7 +470,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* 3. PRESAS INDEPENDIENTES PARA CALDO */}
+              {/* 3. PRESAS PARA CALDO */}
               <div className="bg-blue-50/50 border border-blue-200 rounded-2xl p-3.5 space-y-2">
                 <div className="flex justify-between items-center border-b border-blue-200/60 pb-1.5">
                   <h4 className="text-xs font-black text-blue-950 uppercase">🥣 Presas para Caldo</h4>
@@ -495,7 +495,7 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
-          </div>
+        </div>
 
         {/* MÓDULO GESTIÓN DE MESERAS */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
@@ -538,7 +538,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* PLANIFICADOR MENÚ DIARIO REDISEÑADO */}
+      {/* PLANIFICADOR MENÚ DIARIO */}
       <div className="md:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 flex flex-col h-fit shadow-sm">
         <div className="flex justify-between border-b border-gray-100 pb-4 mb-4 items-center">
           <h2 className="text-lg font-bold text-gray-950">Planificador del Menú del Día</h2>
@@ -682,7 +682,7 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {/* MODAL HISTORIAL DE COMANDAS REDISEÑADO */}
+      {/* 🟢 MODAL HISTORIAL DE COMANDAS CON HORA EXACTA */}
       {verDetalleModal && (
         <div className="fixed inset-0 bg-gray-950/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-xl relative border border-gray-100">
@@ -695,20 +695,32 @@ export default function AdminPage() {
                 pedidosDia.map((p) => {
                   const { numeroMesa, nombreMesera, listaExtras } = procesarMesaCompleta(p.mesa);
                   const esParaLlevar = p.mesa.includes('[TIPO:LLEVAR]');
+                  const horaPedido = p.created_at 
+                    ? new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                    : null;
 
                   return (
                     <div key={p.id} className="py-4 border-b border-gray-100 last:border-0 space-y-3">
                       <div className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2.5 flex-wrap">
                           <span className={`text-xs font-black uppercase px-2.5 py-1 rounded-lg ${
                             esParaLlevar ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
                           }`}>
                             {esParaLlevar ? `🏃‍♂️ Cliente: ${numeroMesa}` : `🍽️ Mesa ${numeroMesa}`}
                           </span>
+                          
                           <span className="text-[11px] font-bold text-gray-600 bg-white border px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-sm">
                             <User className="h-3 w-3 text-emerald-700" /> {nombreMesera}
                           </span>
+
+                          {/* 🟢 HORA DEL PEDIDO */}
+                          {horaPedido && (
+                            <span className="text-[11px] bg-white border border-gray-200 px-2 py-0.5 rounded-lg text-gray-500 font-mono font-bold flex items-center gap-1 shadow-sm">
+                              <Clock className="h-3 w-3 text-amber-500" /> {horaPedido}
+                            </span>
+                          )}
                         </div>
+
                         <span className="font-black text-base text-emerald-900 font-mono">
                           ${Number(p.total).toFixed(2)}
                         </span>
