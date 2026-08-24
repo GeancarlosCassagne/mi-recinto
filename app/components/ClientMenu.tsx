@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Utensils, ShoppingCart, Plus, Minus, CheckCircle, PlusCircle, Trash2, ChevronRight, User, AlertTriangle, Sparkles, Bike, UtensilsCrossed, GlassWater, Milk, Flame, Coffee, Cookie, Edit3, MessageSquare, Tag } from 'lucide-react';
 
@@ -49,6 +49,22 @@ export default function ClientMenu() {
   const [precioAdicional, setPrecioAdicional] = useState('0.50');
 
   const [notificacion, setNotificacion] = useState<{ visible: boolean; mensaje: string }>({ visible: false, mensaje: '' });
+
+  // 🟢 REFERENCIAS PARA AUTO-SCROLL
+  const configuradorRef = useRef<HTMLDivElement>(null);
+  const catalogoRef = useRef<HTMLDivElement>(null);
+
+  const scrollHaciaConfigurador = () => {
+    setTimeout(() => {
+      configuradorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  };
+
+  const scrollHaciaCatalogo = () => {
+    setTimeout(() => {
+      catalogoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  };
 
   // MODAL TONGA Y SECOS
   const [configurandoTonga, setConfigurandoTonga] = useState(false);
@@ -271,18 +287,21 @@ export default function ClientMenu() {
       setConfigurandoTonga(true);
       setPasoTonga('tipo');
       setTipoGallina('');
+      scrollHaciaConfigurador();
     } 
     else if (nombreLimpio.includes('seco criollo')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Criolla');
+      scrollHaciaConfigurador();
     } 
     else if (nombreLimpio.includes('caldo criollo')) {
       setTongaSeleccionada(plato);
       setConfigurandoTonga(true);
       setPasoTonga('presa');
       setTipoGallina('Caldo');
+      scrollHaciaConfigurador();
     } 
     else if (nombreLimpio.includes('almuerzo del día')) {
       setAlmuerzoSeleccionado(plato);
@@ -290,12 +309,14 @@ export default function ClientMenu() {
       setPasoAlmuerzo('tipo');
       setSegundoElegido('');
       setSopaElegida('');
+      scrollHaciaConfigurador();
     } 
     else if (nombreLimpio === 'cola' || nombreLimpio.startsWith('cola ')) {
       if (nombreLimpio === 'cola') {
         setColaSeleccionada(plato);
         setConfigurandoCola(true);
         setPasoCola('tamano');
+        scrollHaciaConfigurador();
       } else {
         agregarAlCarritoNormal(plato);
       }
@@ -303,6 +324,7 @@ export default function ClientMenu() {
     else if (nombreLimpio === 'jugo' || nombreLimpio === 'jugos') {
       setJugoSeleccionado(plato);
       setConfigurandoJugo(true);
+      scrollHaciaConfigurador();
     }
     else {
       agregarAlCarritoNormal(plato);
@@ -323,7 +345,6 @@ export default function ClientMenu() {
     });
   };
 
-  // 🟢 TONGA: SIN SUMAR 0.25 EN LLEVAR Y ETIQUETA [PARA LLEVAR]
   const finalizarTonga = (presa: string) => {
     if (!tongaSeleccionada) return;
 
@@ -334,7 +355,7 @@ export default function ClientMenu() {
 
     if (esTonga) {
       const esGranja = tipoGallina.toLowerCase().includes('granja');
-      precioBase = esGranja ? 2.75 : 5.00; // NO se suman 0.25 a la Tonga
+      precioBase = esGranja ? 2.75 : 5.00;
     } else {
       if (tipoEntrega === 'llevar') {
         precioBase += 0.25;
@@ -362,6 +383,7 @@ export default function ClientMenu() {
 
     setConfigurandoTonga(false);
     setTongaSeleccionada(null);
+    scrollHaciaCatalogo();
   };
 
   const seleccionarTipoAlmuerzo = (tipo: 'completo' | 'segundo' | 'caldo') => {
@@ -436,6 +458,7 @@ export default function ClientMenu() {
 
     setConfigurandoAlmuerzo(false);
     setAlmuerzoSeleccionado(null);
+    scrollHaciaCatalogo();
   };
 
   const finalizarConfiguracionCola = (sabor: string) => {
@@ -465,6 +488,7 @@ export default function ClientMenu() {
 
     setConfigurandoCola(false);
     setColaSeleccionada(null);
+    scrollHaciaCatalogo();
   };
 
   const finalizarConfiguracionJugo = (saborJugo: string) => {
@@ -490,6 +514,7 @@ export default function ClientMenu() {
 
     setConfigurandoJugo(false);
     setJugoSeleccionado(null);
+    scrollHaciaCatalogo();
   };
 
   const modificarCantidad = (idUnico: string, accion: 'incrementar' | 'decrementar') => {
@@ -669,7 +694,6 @@ export default function ClientMenu() {
 
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
 
-  // Solo jugos del día configurados en Admin
   const opcionesBebidas = platos.filter(p => p.categoria === 'jugo');
 
   const opcionesPresasSegunGallina = () => {
@@ -837,209 +861,104 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* MODAL CONFIGURADOR ALMUERZO DIARIO */}
-        {configurandoAlmuerzo && (
-          <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4 transition-all duration-200">
-            <div className="flex justify-between items-center border-b border-emerald-100 pb-3">
-              <h3 className="text-base font-bold text-emerald-950">Configurando Almuerzo Diario {tipoEntrega === 'llevar' && <span className="text-red-600 text-xs font-black">(Para Llevar)</span>}</h3>
-              <button onClick={() => setConfigurandoAlmuerzo(false)} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
-            </div>
+        {/* 🟢 CONTENEDOR CON REF PARA AUTO-SCROLL */}
+        <div ref={configuradorRef} className="scroll-mt-4">
 
-            {pasoAlmuerzo === 'tipo' && (
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase mb-3">1. Selecciona el tipo de servicio:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <button onClick={() => seleccionarTipoAlmuerzo('completo')} className="p-4 bg-white border rounded-xl hover:border-emerald-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"><span className="text-gray-950">Almuerzo Completo</span><span className="text-emerald-700 font-black text-xs">${tipoEntrega === 'llevar' ? '3.25' : '3.00'}</span></button>
-                  <button onClick={() => seleccionarTipoAlmuerzo('segundo')} className="p-4 bg-white border rounded-xl hover:border-emerald-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"><span className="text-gray-950">Solo Segundo</span><span className="text-emerald-700 font-black text-xs">${tipoEntrega === 'llevar' ? '2.75' : '2.50'}</span></button>
-                  <button onClick={() => seleccionarTipoAlmuerzo('caldo')} className="p-4 bg-white border rounded-xl hover:border-emerald-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"><span className="text-gray-950">Solo Caldo</span><span className="text-emerald-700 font-black text-xs">${tipoEntrega === 'llevar' ? '1.75' : '1.50'}</span></button>
-                </div>
+          {/* MODAL CONFIGURADOR ALMUERZO DIARIO */}
+          {configurandoAlmuerzo && (
+            <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4 transition-all duration-200 mb-6">
+              <div className="flex justify-between items-center border-b border-emerald-100 pb-3">
+                <h3 className="text-base font-bold text-emerald-950">Configurando Almuerzo Diario {tipoEntrega === 'llevar' && <span className="text-red-600 text-xs font-black">(Para Llevar)</span>}</h3>
+                <button onClick={() => { setConfigurandoAlmuerzo(false); scrollHaciaCatalogo(); }} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
               </div>
-            )}
 
-            {pasoAlmuerzo === 'caldo' && (
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase mb-3">2. Selecciona la Sopa / Caldo de hoy:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {opcionesCaldos.length === 0 ? (
-                    <button 
-                      onClick={() => {
-                        seleccionarCaldoAlmuerzo('Sin sopa');
-                      }} 
-                      className="p-3 bg-white border rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white transition text-center text-xs shadow-sm"
-                    >
-                      No hay caldos hoy (Pasar directo)
-                    </button>
-                  ) : (
-                    opcionesCaldos.map((c) => (
+              {pasoAlmuerzo === 'tipo' && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-3">1. Selecciona el tipo de servicio:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button onClick={() => seleccionarTipoAlmuerzo('completo')} className="p-4 bg-white border rounded-xl hover:border-emerald-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"><span className="text-gray-950">Almuerzo Completo</span><span className="text-emerald-700 font-black text-xs">${tipoEntrega === 'llevar' ? '3.25' : '3.00'}</span></button>
+                    <button onClick={() => seleccionarTipoAlmuerzo('segundo')} className="p-4 bg-white border rounded-xl hover:border-emerald-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"><span className="text-gray-950">Solo Segundo</span><span className="text-emerald-700 font-black text-xs">${tipoEntrega === 'llevar' ? '2.75' : '2.50'}</span></button>
+                    <button onClick={() => seleccionarTipoAlmuerzo('caldo')} className="p-4 bg-white border rounded-xl hover:border-emerald-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"><span className="text-gray-950">Solo Caldo</span><span className="text-emerald-700 font-black text-xs">${tipoEntrega === 'llevar' ? '1.75' : '1.50'}</span></button>
+                  </div>
+                </div>
+              )}
+
+              {pasoAlmuerzo === 'caldo' && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-3">2. Selecciona la Sopa / Caldo de hoy:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {opcionesCaldos.length === 0 ? (
                       <button 
-                        key={c.id} 
-                        disabled={!c.disponible}
-                        onClick={() => seleccionarCaldoAlmuerzo(c.nombre)} 
-                        className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
-                          c.disponible 
-                            ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                        }`}
+                        onClick={() => seleccionarCaldoAlmuerzo('Sin sopa')} 
+                        className="p-3 bg-white border rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white transition text-center text-xs shadow-sm"
                       >
-                        <span className="flex items-center justify-center gap-2">
-                          <span>{c.nombre}</span>
-                          {!c.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
-                        </span>
+                        No hay caldos hoy (Pasar directo)
                       </button>
-                    ))
-                  )}
+                    ) : (
+                      opcionesCaldos.map((c) => (
+                        <button 
+                          key={c.id} 
+                          disabled={!c.disponible}
+                          onClick={() => seleccionarCaldoAlmuerzo(c.nombre)} 
+                          className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
+                            c.disponible 
+                              ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
+                              : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                          }`}
+                        >
+                          <span className="flex items-center justify-center gap-2">
+                            <span>{c.nombre}</span>
+                            {!c.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {pasoAlmuerzo === 'segundo' && (
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase mb-1">
-                  {tipoAlmuerzo === 'completo' ? '3. Selecciona el plato Fuerte / Segundo:' : '2. Selecciona el plato Fuerte / Segundo:'}
-                </p>
-                {tipoAlmuerzo === 'completo' && <p className="text-[11px] text-emerald-800 font-medium mb-3">Sopa elegida: <span className="uppercase font-bold">{sopaElegida}</span></p>}
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {opcionesSegundos.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">No hay platos fuertes registrados hoy.</p>
-                  ) : (
-                    opcionesSegundos.map((s) => (
-                      <button 
-                        key={s.id} 
-                        disabled={!s.disponible}
-                        onClick={() => seleccionarSegundoAlmuerzo(s.nombre)} 
-                        className={`p-3 border rounded-xl font-semibold text-left text-xs uppercase flex justify-between items-center shadow-sm transition-all ${
-                          s.disponible 
-                            ? 'bg-white text-gray-900 hover:bg-emerald-50/50' 
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span>{s.nombre}</span>
-                          {!s.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
-                        </span>
-                        {s.disponible && <ChevronRight className="h-4 w-4 text-emerald-700" />}
-                      </button>
-                    ))
-                  )}
+              {pasoAlmuerzo === 'segundo' && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-1">
+                    {tipoAlmuerzo === 'completo' ? '3. Selecciona el plato Fuerte / Segundo:' : '2. Selecciona el plato Fuerte / Segundo:'}
+                  </p>
+                  {tipoAlmuerzo === 'completo' && <p className="text-[11px] text-emerald-800 font-medium mb-3">Sopa elegida: <span className="uppercase font-bold">{sopaElegida}</span></p>}
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {opcionesSegundos.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">No hay platos fuertes registrados hoy.</p>
+                    ) : (
+                      opcionesSegundos.map((s) => (
+                        <button 
+                          key={s.id} 
+                          disabled={!s.disponible}
+                          onClick={() => seleccionarSegundoAlmuerzo(s.nombre)} 
+                          className={`p-3 border rounded-xl font-semibold text-left text-xs uppercase flex justify-between items-center shadow-sm transition-all ${
+                            s.disponible 
+                              ? 'bg-white text-gray-900 hover:bg-emerald-50/50' 
+                              : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span>{s.nombre}</span>
+                            {!s.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
+                          </span>
+                          {s.disponible && <ChevronRight className="h-4 w-4 text-emerald-700" />}
+                        </button>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {pasoAlmuerzo === 'presa_segundo' && (
-              <div>
-                <p className="text-xs font-bold text-emerald-800 uppercase mb-1">Selecciona la presa para el Pollo Hornado:</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {platos.filter(p => p.categoria === 'presa_granja').map((p) => {
-                    const nombreLimpioPresa = p.nombre
-                      .replace(' Granja', '')
-                      .replace(' Criolla', '')
-                      .replace(' Caldo', '')
-                      .replace(' (Palizada)', '');
-
-                    return (
-                      <button 
-                        key={p.id} 
-                        disabled={!p.disponible}
-                        onClick={() => confirmarPresaSegundoAlmuerzo(nombreLimpioPresa)} 
-                        className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
-                          p.disponible 
-                            ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                        }`}
-                      >
-                        <span className="flex flex-col items-center justify-center gap-1">
-                          <span>{nombreLimpioPresa}</span>
-                          {!p.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase block">Agotado</span>}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {pasoAlmuerzo === 'bebida' && (
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase mb-1">
-                  {tipoAlmuerzo === 'completo' ? '4. Selecciona el Jugo del Día:' : '3. Selecciona el Jugo del Día:'}
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                  {opcionesBebidas.length === 0 ? (
-                    <button 
-                      onClick={() => finalizarAlmuerzo('Sin bebida')} 
-                      className="p-3 bg-white border rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white transition text-center text-xs shadow-sm"
-                    >
-                      Sin Bebida / Pasar Directo
-                    </button>
-                  ) : (
-                    opcionesBebidas.map((b) => (
-                      <button 
-                        key={b.id} 
-                        disabled={!b.disponible}
-                        onClick={() => finalizarAlmuerzo(b.nombre)} 
-                        className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
-                          b.disponible 
-                            ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                        }`}
-                      >
-                        <span className="flex items-center justify-center gap-2">
-                          <span>{b.nombre}</span>
-                          {!b.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-          </div>
-        )}
-
-        {/* MODAL CONFIGURADOR TONGA, SECOS Y CALDOS */}
-        {configurandoTonga && (
-          <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b border-emerald-100 pb-3">
-              <h3 className="text-base font-bold text-emerald-950 flex items-center gap-2">
-                <span>Personalizando {tongaSeleccionada?.nombre}</span>
-              </h3>
-              <button onClick={() => setConfigurandoTonga(false)} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
-            </div>
-            {pasoTonga === 'tipo' ? (
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">1. Tipo de preparación / Gallina</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => { setTipoGallina('Criolla'); setPasoTonga('presa'); }} 
-                    className="p-3.5 border rounded-xl font-bold bg-white text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30 flex items-center justify-between text-sm shadow-sm"
-                  >
-                    <span>🐓 Gallina Criolla</span>
-                    <ChevronRight className="h-4 w-4 text-emerald-700" />
-                  </button>
-                  <button 
-                    onClick={() => { setTipoGallina('Granja'); setPasoTonga('presa'); }} 
-                    className="p-3.5 border rounded-xl font-bold bg-white text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30 flex items-center justify-between text-sm shadow-sm"
-                  >
-                    <span>🍗 Gallina de Granja</span>
-                    <ChevronRight className="h-4 w-4 text-emerald-700" />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                  2. Presa disponible para {tipoGallina}
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                  {opcionesPresasSegunGallina().length === 0 ? (
-                    <p className="text-xs text-gray-400 italic col-span-4 text-center py-3">No hay presas registradas para esta preparación.</p>
-                  ) : (
-                    opcionesPresasSegunGallina().map((p) => {
+              {pasoAlmuerzo === 'presa_segundo' && (
+                <div>
+                  <p className="text-xs font-bold text-emerald-800 uppercase mb-1">Selecciona la presa para el Pollo Hornado:</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {platos.filter(p => p.categoria === 'presa_granja').map((p) => {
                       const nombreLimpioPresa = p.nombre
-                        .replace(' Criolla', '')
                         .replace(' Granja', '')
+                        .replace(' Criolla', '')
                         .replace(' Caldo', '')
                         .replace(' (Palizada)', '');
 
@@ -1047,8 +966,8 @@ export default function ClientMenu() {
                         <button 
                           key={p.id} 
                           disabled={!p.disponible}
-                          onClick={() => finalizarTonga(nombreLimpioPresa)} 
-                          className={`p-3 border rounded-xl font-bold text-center text-sm shadow-sm transition-all ${
+                          onClick={() => confirmarPresaSegundoAlmuerzo(nombreLimpioPresa)} 
+                          className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
                             p.disponible 
                               ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
                               : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
@@ -1060,121 +979,229 @@ export default function ClientMenu() {
                           </span>
                         </button>
                       );
-                    })
-                  )}
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
 
-        {/* MODAL CONFIGURADOR DE COLAS */}
-        {configurandoCola && (
-          <div className="bg-sky-50/70 border border-sky-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b border-sky-100 pb-3">
-              <h3 className="text-base font-bold text-sky-950 flex items-center gap-2">
-                <GlassWater className="h-5 w-5 text-sky-700" />
-                <span>Configurando Gaseosa / Cola</span>
-              </h3>
-              <button onClick={() => setConfigurandoCola(false)} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
+              {pasoAlmuerzo === 'bebida' && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-1">
+                    {tipoAlmuerzo === 'completo' ? '4. Selecciona el Jugo del Día:' : '3. Selecciona el Jugo del Día:'}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                    {opcionesBebidas.length === 0 ? (
+                      <button 
+                        onClick={() => finalizarAlmuerzo('Sin bebida')} 
+                        className="p-3 bg-white border rounded-xl font-bold text-gray-900 hover:bg-emerald-700 hover:text-white transition text-center text-xs shadow-sm"
+                      >
+                        Sin Bebida / Pasar Directo
+                      </button>
+                    ) : (
+                      opcionesBebidas.map((b) => (
+                        <button 
+                          key={b.id} 
+                          disabled={!b.disponible}
+                          onClick={() => finalizarAlmuerzo(b.nombre)} 
+                          className={`p-3 border rounded-xl font-bold text-center text-xs uppercase shadow-sm transition-all ${
+                            b.disponible 
+                              ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
+                              : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                          }`}
+                        >
+                          <span className="flex items-center justify-center gap-2">
+                            <span>{b.nombre}</span>
+                            {!b.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase">Agotado</span>}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
             </div>
+          )}
 
-            {pasoCola === 'tamano' && (
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase mb-3">1. Selecciona el tamaño de la cola:</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => { setColaTamano('Personal'); setPasoCola('envase'); }} 
-                    className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
-                  >
-                    <span className="text-gray-950 font-black">🥤 Personal</span>
-                    <span className="text-xs text-sky-700 font-bold">Vidrio ($0.50) / Plástico ($0.60)</span>
-                  </button>
-                  <button 
-                    onClick={() => { setColaTamano('Litro'); setPasoCola('envase'); }} 
-                    className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
-                  >
-                    <span className="text-gray-950 font-black">🍾 1 Litro / Familiar</span>
-                    <span className="text-xs text-sky-700 font-bold">Vidrio ($1.25) / Plástico ($1.50)</span>
-                  </button>
-                </div>
+          {/* MODAL CONFIGURADOR TONGA, SECOS Y CALDOS */}
+          {configurandoTonga && (
+            <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4 mb-6">
+              <div className="flex justify-between items-center border-b border-emerald-100 pb-3">
+                <h3 className="text-base font-bold text-emerald-950 flex items-center gap-2">
+                  <span>Personalizando {tongaSeleccionada?.nombre}</span>
+                </h3>
+                <button onClick={() => { setConfigurandoTonga(false); scrollHaciaCatalogo(); }} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
               </div>
-            )}
-
-            {pasoCola === 'envase' && (
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase mb-3">2. Selecciona el tipo de envase ({colaTamano}):</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => { setColaEnvase('Vidrio'); setPasoCola('sabor'); }} 
-                    className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
-                  >
-                    <span className="text-gray-950 font-black">🧴 Envase de Vidrio (Retornable)</span>
-                    <span className="text-xs text-sky-700 font-bold">{colaTamano === 'Personal' ? '$0.50' : '$1.25'}</span>
-                  </button>
-                  <button 
-                    onClick={() => { setColaEnvase('Plástico'); setPasoCola('sabor'); }} 
-                    className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
-                  >
-                    <span className="text-gray-950 font-black">🥤 Envase de Plástico (Desechable)</span>
-                    <span className="text-xs text-sky-700 font-bold">{colaTamano === 'Personal' ? '$0.60' : '$1.50'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {pasoCola === 'sabor' && (
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase mb-1">3. Selecciona el Sabor / Marca:</p>
-                <p className="text-[11px] text-sky-800 font-medium mb-3">Seleccionado: <span className="font-bold">{colaTamano} ({colaEnvase})</span></p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {['Coca-Cola', 'Fioravanti', 'Sprite', 'Fanta', 'Manzana', 'Inca Kola'].map((sabor) => (
+              {pasoTonga === 'tipo' ? (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">1. Tipo de preparación / Gallina</p>
+                  <div className="grid grid-cols-2 gap-3">
                     <button 
-                      key={sabor}
-                      onClick={() => finalizarConfiguracionCola(sabor)}
-                      className="p-3 bg-white border rounded-xl font-bold text-xs uppercase hover:bg-sky-700 hover:text-white transition shadow-sm text-center"
+                      onClick={() => { setTipoGallina('Criolla'); setPasoTonga('presa'); }} 
+                      className="p-3.5 border rounded-xl font-bold bg-white text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30 flex items-center justify-between text-sm shadow-sm"
                     >
-                      {sabor}
+                      <span>🐓 Gallina Criolla</span>
+                      <ChevronRight className="h-4 w-4 text-emerald-700" />
                     </button>
-                  ))}
+                    <button 
+                      onClick={() => { setTipoGallina('Granja'); setPasoTonga('presa'); }} 
+                      className="p-3.5 border rounded-xl font-bold bg-white text-gray-900 hover:border-emerald-600 hover:bg-emerald-50/30 flex items-center justify-between text-sm shadow-sm"
+                    >
+                      <span>🍗 Gallina de Granja</span>
+                      <ChevronRight className="h-4 w-4 text-emerald-700" />
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                    2. Presa disponible para {tipoGallina}
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                    {opcionesPresasSegunGallina().length === 0 ? (
+                      <p className="text-xs text-gray-400 italic col-span-4 text-center py-3">No hay presas registradas para esta preparación.</p>
+                    ) : (
+                      opcionesPresasSegunGallina().map((p) => {
+                        const nombreLimpioPresa = p.nombre
+                          .replace(' Criolla', '')
+                          .replace(' Granja', '')
+                          .replace(' Caldo', '')
+                          .replace(' (Palizada)', '');
+
+                        return (
+                          <button 
+                            key={p.id} 
+                            disabled={!p.disponible}
+                            onClick={() => finalizarTonga(nombreLimpioPresa)} 
+                            className={`p-3 border rounded-xl font-bold text-center text-sm shadow-sm transition-all ${
+                              p.disponible 
+                                ? 'bg-white text-gray-900 hover:bg-emerald-700 hover:text-white' 
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                            }`}
+                          >
+                            <span className="flex flex-col items-center justify-center gap-1">
+                              <span>{nombreLimpioPresa}</span>
+                              {!p.disponible && <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded uppercase block">Agotado</span>}
+                            </span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* MODAL CONFIGURADOR DE COLAS */}
+          {configurandoCola && (
+            <div className="bg-sky-50/70 border border-sky-200 rounded-2xl p-6 shadow-sm space-y-4 mb-6">
+              <div className="flex justify-between items-center border-b border-sky-100 pb-3">
+                <h3 className="text-base font-bold text-sky-950 flex items-center gap-2">
+                  <GlassWater className="h-5 w-5 text-sky-700" />
+                  <span>Configurando Gaseosa / Cola</span>
+                </h3>
+                <button onClick={() => { setConfigurandoCola(false); scrollHaciaCatalogo(); }} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* MODAL CONFIGURADOR DE JUGOS */}
-        {configurandoJugo && (
-          <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b border-amber-100 pb-3">
-              <h3 className="text-base font-bold text-amber-950 flex items-center gap-2">
-                <Milk className="h-5 w-5 text-amber-700" />
-                <span>Seleccionar Tipo / Sabor de Jugo</span>
-              </h3>
-              <button onClick={() => setConfigurandoJugo(false)} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
-            </div>
+              {pasoCola === 'tamano' && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-3">1. Selecciona el tamaño de la cola:</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => { setColaTamano('Personal'); setPasoCola('envase'); }} 
+                      className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
+                    >
+                      <span className="text-gray-950 font-black">🥤 Personal</span>
+                      <span className="text-xs text-sky-700 font-bold">Vidrio ($0.50) / Plástico ($0.60)</span>
+                    </button>
+                    <button 
+                      onClick={() => { setColaTamano('Litro'); setPasoCola('envase'); }} 
+                      className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
+                    >
+                      <span className="text-gray-950 font-black">🍾 1 Litro / Familiar</span>
+                      <span className="text-xs text-sky-700 font-bold">Vidrio ($1.25) / Plástico ($1.50)</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              {[
-                { nombre: 'Jugo de Limón / Limonada', icono: '🍋' },
-                { nombre: 'Jugo de Mora', icono: '🫐' },
-                { nombre: 'Quaker / Avena con Naranjilla', icono: '🌾' },
-                { nombre: 'Chicha Manaba', icono: '🌽' },
-                { nombre: 'Jugo de Maracuyá', icono: '🍊' },
-                { nombre: 'Jugo de Tamarindo', icono: '🧃' }
-              ].map((j) => (
-                <button 
-                  key={j.nombre}
-                  onClick={() => finalizarConfiguracionJugo(j.nombre)}
-                  className="p-3.5 bg-white border rounded-xl font-bold text-xs uppercase hover:bg-amber-700 hover:text-white transition shadow-sm flex flex-col items-center justify-center gap-1"
-                >
-                  <span className="text-base">{j.icono}</span>
-                  <span>{j.nombre}</span>
-                </button>
-              ))}
+              {pasoCola === 'envase' && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-3">2. Selecciona el tipo de envase ({colaTamano}):</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => { setColaEnvase('Vidrio'); setPasoCola('sabor'); }} 
+                      className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
+                    >
+                      <span className="text-gray-950 font-black">🧴 Envase de Vidrio (Retornable)</span>
+                      <span className="text-xs text-sky-700 font-bold">{colaTamano === 'Personal' ? '$0.50' : '$1.25'}</span>
+                    </button>
+                    <button 
+                      onClick={() => { setColaEnvase('Plástico'); setPasoCola('sabor'); }} 
+                      className="p-4 bg-white border rounded-xl hover:border-sky-600 font-bold text-sm text-center flex flex-col items-center justify-center gap-1 shadow-sm"
+                    >
+                      <span className="text-gray-950 font-black">🥤 Envase de Plástico (Desechable)</span>
+                      <span className="text-xs text-sky-700 font-bold">{colaTamano === 'Personal' ? '$0.60' : '$1.50'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {pasoCola === 'sabor' && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-1">3. Selecciona el Sabor / Marca:</p>
+                  <p className="text-[11px] text-sky-800 font-medium mb-3">Seleccionado: <span className="font-bold">{colaTamano} ({colaEnvase})</span></p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {['Coca-Cola', 'Fioravanti', 'Sprite', 'Fanta', 'Manzana', 'Inca Kola'].map((sabor) => (
+                      <button 
+                        key={sabor}
+                        onClick={() => finalizarConfiguracionCola(sabor)}
+                        className="p-3 bg-white border rounded-xl font-bold text-xs uppercase hover:bg-sky-700 hover:text-white transition shadow-sm text-center"
+                      >
+                        {sabor}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
+
+          {/* MODAL CONFIGURADOR DE JUGOS */}
+          {configurandoJugo && (
+            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-6 shadow-sm space-y-4 mb-6">
+              <div className="flex justify-between items-center border-b border-amber-100 pb-3">
+                <h3 className="text-base font-bold text-amber-950 flex items-center gap-2">
+                  <Milk className="h-5 w-5 text-amber-700" />
+                  <span>Seleccionar Tipo / Sabor de Jugo</span>
+                </h3>
+                <button onClick={() => { setConfigurandoJugo(false); scrollHaciaCatalogo(); }} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {[
+                  { nombre: 'Jugo de Limón / Limonada', icono: '🍋' },
+                  { nombre: 'Jugo de Mora', icono: '🫐' },
+                  { nombre: 'Quaker / Avena con Naranjilla', icono: '🌾' },
+                  { nombre: 'Chicha Manaba', icono: '🌽' },
+                  { nombre: 'Jugo de Maracuyá', icono: '🍊' },
+                  { nombre: 'Jugo de Tamarindo', icono: '🧃' }
+                ].map((j) => (
+                  <button 
+                    key={j.nombre}
+                    onClick={() => finalizarConfiguracionJugo(j.nombre)}
+                    className="p-3.5 bg-white border rounded-xl font-bold text-xs uppercase hover:bg-amber-700 hover:text-white transition shadow-sm flex flex-col items-center justify-center gap-1"
+                  >
+                    <span className="text-base">{j.icono}</span>
+                    <span>{j.nombre}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
 
         {/* 3️⃣ ARMAR ALMUERZO DEL DÍA */}
         {platoAlmuerzoDelDia && (
@@ -1214,8 +1241,8 @@ export default function ClientMenu() {
           {renderPanelCarrito()}
         </div>
 
-        {/* 5️⃣ SECCIONES CON CUADROS DE COLORES ELEGANTES */}
-        <div className="space-y-6">
+        {/* 5️⃣ SECCIONES CON CUADROS DE COLORES ELEGANTES (CON REF PARA VOLVER TRAS CONFIGURAR) */}
+        <div ref={catalogoRef} className="space-y-6 scroll-mt-4">
           
           {/* 1. PLATOS TRADICIONALES Y FUERTES */}
           {platosTradicionales.length > 0 && (
