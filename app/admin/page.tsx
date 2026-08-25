@@ -211,26 +211,20 @@ export default function AdminPage() {
     }
   };
 
-  const esPlatoFijoInmutable = (nombrePlato: string, catPlato: string) => {
-    const n = nombrePlato.toLowerCase();
-    return catPlato === 'fijo' || 
-           catPlato === 'bebida' ||
+  const esPlatoPermanente = (catPlato: string) => {
+    return catPlato === 'tradicional' || 
+           catPlato === 'bebida' || 
+           catPlato === 'extra' ||
            catPlato === 'presa_criolla' ||
            catPlato === 'presa_granja' ||
-           catPlato === 'presa_caldo' ||
-           n.includes('tonga') || 
-           n.includes('caldo criollo') ||
-           n.includes('seco criollo') ||
-           n.includes('almuerzo del día') || 
-           n.includes('cola') || 
-           n.includes('botella de agua');
+           catPlato === 'presa_caldo';
   };
 
   const eliminarPlato = async (id: string, nombrePlato: string, catPlato: string) => {
-    const esFijo = esPlatoFijoInmutable(nombrePlato, catPlato);
+    const esPerm = esPlatoPermanente(catPlato);
 
-    const mensajeConfirmacion = esFijo
-      ? `⚠️ ¡ATENCIÓN! Estás intentando borrar un plato FIJO ("${nombrePlato}").\n\n¿Estás completamente seguro de eliminarlo del Banco General?`
+    const mensajeConfirmacion = esPerm
+      ? `⚠️ ¡ATENCIÓN! Estás intentando borrar un plato estructural/fijo de la carta ("${nombrePlato}").\n\n¿Estás completamente seguro de eliminarlo del Banco General?`
       : `¿Estás seguro de que deseas eliminar permanentemente el plato "${nombrePlato}" del Banco General?`;
 
     const seguro = confirm(mensajeConfirmacion);
@@ -252,8 +246,8 @@ export default function AdminPage() {
     }
   };
 
-  const alternarSeleccionPlato = (id: string, nombrePlato: string, catPlato: string) => {
-    if (esPlatoFijoInmutable(nombrePlato, catPlato)) return;
+  const alternarSeleccionPlato = (id: string, catPlato: string) => {
+    if (esPlatoPermanente(catPlato)) return;
 
     if (platosSeleccionados.includes(id)) {
       setPlatosSeleccionados(platosSeleccionados.filter(pId => pId !== id));
@@ -267,7 +261,7 @@ export default function AdminPage() {
     
     let listaFinal = [...platosSeleccionados];
     platos.forEach(p => {
-      if (esPlatoFijoInmutable(p.nombre, p.categoria) && !listaFinal.includes(p.id)) {
+      if (esPlatoPermanente(p.categoria) && !listaFinal.includes(p.id)) {
         listaFinal.push(p.id);
       }
     });
@@ -389,10 +383,10 @@ export default function AdminPage() {
         <button onClick={manejarCierreCaja} className={`w-full sm:w-auto font-bold text-xs uppercase px-6 py-3.5 rounded-xl text-white ${estadoCaja === 'abierta' ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-700 hover:bg-slate-800'}`}>{estadoCaja === 'abierta' ? 'Finalizar Jornada' : 'Habilitar Jornada'}</button>
       </div>
 
-      {/* CONTENEDOR RESPONSIVO: ORDEN PERFECTO EN MÓVIL Y 2 COLUMNAS EN ESCRITORIO */}
+      {/* CONTENEDOR RESPONSIVO */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* 1️⃣ REGISTRAR PLATO BASE: 1° en móvil, arriba a la izquierda en escritorio */}
+        {/* 1️⃣ REGISTRAR PLATO BASE */}
         <div className="order-1 lg:order-1 lg:col-span-5 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <h2 className="text-base font-bold pb-3 border-b mb-4 flex items-center gap-2 text-gray-950">
             <PlusCircle className="text-emerald-700 h-5 w-5" /> Registrar Plato Base
@@ -415,11 +409,21 @@ export default function AdminPage() {
                 onChange={(e) => setCategoria(e.target.value)} 
                 className="w-full border border-gray-200 rounded-xl p-2.5 text-xs bg-white outline-none focus:border-emerald-700 font-bold text-gray-800"
               >
-                <option value="segundo">🥩 Segundo (Plato Fuerte)</option>
-                <option value="caldo">🥣 Caldo / Sopa</option>
-                <option value="fijo">🍃 Fijo (Tonga, Almuerzo del Día)</option>
-                <option value="jugo">🧃 Jugo del Día (Incluido en Almuerzo)</option>
-                <option value="bebida">🥤 Bebida Comercial (Cola / Agua - Extra)</option>
+                <optgroup label="Almuerzo Diario">
+                  <option value="segundo">🥩 Segundo (Plato Fuerte del Almuerzo)</option>
+                  <option value="caldo">🥣 Caldo / Sopa del Almuerzo</option>
+                  <option value="jugo">🧃 Jugo del Día (Incluido en Almuerzo)</option>
+                </optgroup>
+                <optgroup label="Secciones de la Carta">
+                  <option value="tradicional">🔥 Platos Tradicionales y Fuertes</option>
+                  <option value="bebida">🥤 Bebidas Comerciales y Gaseosas</option>
+                  <option value="extra">🥟 Aperitivos, Empanadas y Extras</option>
+                </optgroup>
+                <optgroup label="Presas Específicas">
+                  <option value="presa_granja">🍗 Presa Pollo Granja / Hornado</option>
+                  <option value="presa_criolla">🐓 Presa Gallina Criolla</option>
+                  <option value="presa_caldo">🍲 Presa Caldo Criollo</option>
+                </optgroup>
               </select>
             </div>
 
@@ -429,7 +433,7 @@ export default function AdminPage() {
           </form>
         </div>
 
-        {/* 2️⃣ PLANIFICADOR DEL MENÚ DEL DÍA: 2° en móvil, arriba a la derecha en escritorio */}
+        {/* 2️⃣ PLANIFICADOR DEL MENÚ DEL DÍA */}
         <div className="order-2 lg:order-2 lg:col-span-7 bg-white rounded-2xl border border-gray-200 p-6 flex flex-col shadow-sm">
           <div className="flex justify-between border-b border-gray-100 pb-3 mb-3 items-center">
             <h2 className="text-base font-bold text-gray-950 flex items-center gap-2">
@@ -442,8 +446,8 @@ export default function AdminPage() {
 
           <div className="space-y-2 overflow-y-auto pr-1.5 max-h-[360px]">
             {platosPlanificadorVisibles.map((plato) => {
-              const esFijo = esPlatoFijoInmutable(plato.nombre, plato.categoria);
-              const marcado = esFijo || platosSeleccionados.includes(plato.id);
+              const esPerm = esPlatoPermanente(plato.categoria);
+              const marcado = esPerm || platosSeleccionados.includes(plato.id);
 
               return (
                 <div 
@@ -455,11 +459,11 @@ export default function AdminPage() {
                   <div className="flex items-center space-x-3 flex-1 min-w-0">
                     <button 
                       type="button"
-                      onClick={() => alternarSeleccionPlato(plato.id, plato.nombre, plato.categoria)} 
+                      onClick={() => alternarSeleccionPlato(plato.id, plato.categoria)} 
                       className="flex items-center justify-center text-gray-400 hover:text-emerald-700 transition-colors focus:outline-none shrink-0"
                     >
                       {marcado ? (
-                        <CheckSquare className={`h-4 w-4 ${esFijo ? 'text-gray-400' : 'text-emerald-700'}`} />
+                        <CheckSquare className={`h-4 w-4 ${esPerm ? 'text-gray-400' : 'text-emerald-700'}`} />
                       ) : (
                         <Square className="h-4 w-4 text-gray-300" />
                       )}
@@ -516,9 +520,10 @@ export default function AdminPage() {
                         >
                           <option value="segundo">🥩 Segundo</option>
                           <option value="caldo">🥣 Caldo</option>
-                          <option value="fijo">🍃 Fijo</option>
                           <option value="jugo">🧃 Jugo del Día</option>
+                          <option value="tradicional">🔥 Tradicional y Fuerte</option>
                           <option value="bebida">🥤 Bebida Comercial</option>
+                          <option value="extra">🥟 Aperitivos y Extras</option>
                         </select>
                       </div>
                     </div>
@@ -553,9 +558,9 @@ export default function AdminPage() {
                       type="button"
                       onClick={() => eliminarPlato(plato.id, plato.nombre, plato.categoria)}
                       className={`p-1.5 rounded-lg border ${
-                        esFijo ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-600'
+                        esPerm ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-600'
                       }`}
-                      title={esFijo ? 'Eliminar Fijo' : 'Eliminar Plato'}
+                      title={esPerm ? 'Eliminar de Carta' : 'Eliminar Plato'}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -573,7 +578,7 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* 3️⃣ GESTIÓN DE MESERAS: 3° en móvil, abajo a la izquierda en escritorio */}
+        {/* 3️⃣ GESTIÓN DE MESERAS */}
         <div className="order-3 lg:order-3 lg:col-span-5 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
           <h2 className="text-base font-bold text-gray-950 flex items-center gap-2 border-b pb-3">
             <User className="h-5 w-5 text-emerald-700" /> Personal de Servicio (Meseras)
@@ -613,7 +618,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* 4️⃣ PANEL DE DISPONIBILIDAD DE COCINA: 4° en móvil, abajo a la derecha en escritorio */}
+        {/* 4️⃣ PANEL DE DISPONIBILIDAD DE COCINA */}
         <div className="order-4 lg:order-4 lg:col-span-7 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
           <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest border-b pb-2">
             Disponibilidad Activa de Cocina

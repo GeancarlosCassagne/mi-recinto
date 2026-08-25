@@ -50,7 +50,7 @@ export default function ClientMenu() {
 
   const [notificacion, setNotificacion] = useState<{ visible: boolean; mensaje: string }>({ visible: false, mensaje: '' });
 
-  // 🟢 REFERENCIAS PARA AUTO-SCROLL
+  // REFERENCIAS PARA AUTO-SCROLL
   const configuradorRef = useRef<HTMLDivElement>(null);
   const catalogoRef = useRef<HTMLDivElement>(null);
 
@@ -154,20 +154,16 @@ export default function ClientMenu() {
       const platosFiltrados = todosLosPlatos.filter((plato) => {
         const nombreLimpio = plato.nombre.toLowerCase();
         
+        // 🟢 Carga directa sin depender de la categoría 'fijo'
         const esComponenteEstructural = 
           plato.categoria === 'presa_criolla' ||
           plato.categoria === 'presa_granja' ||
           plato.categoria === 'presa_caldo' ||
-          plato.categoria === 'fijo' ||
+          plato.categoria === 'tradicional' ||
           plato.categoria === 'bebida' ||
+          plato.categoria === 'extra' ||
           plato.categoria === 'jugo' ||
-          nombreLimpio.includes('almuerzo del día') ||
-          nombreLimpio.includes('tonga') ||
-          nombreLimpio.includes('hornado') ||
-          nombreLimpio.includes('horneado') ||
-          nombreLimpio.includes('cola') ||
-          nombreLimpio.includes('jugo') ||
-          nombreLimpio.includes('seco criollo');
+          nombreLimpio.includes('almuerzo del día');
 
         return esComponenteEstructural || idsAsignados.includes(plato.id);
       });
@@ -264,7 +260,7 @@ export default function ClientMenu() {
           nombre: det.platos.nombre,
           precio: det.precio_unitario,
           disponible: true,
-          categoria: 'fijo'
+          categoria: 'tradicional'
         },
         grid: det.cantidad,
         detallesPersonalizados: detalles
@@ -706,33 +702,21 @@ export default function ClientMenu() {
 
   const platoAlmuerzoDelDia = platos.find(p => p.nombre.toLowerCase().includes('almuerzo del día'));
   
+  // 🟢 1. PLATOS TRADICIONALES Y FUERTES
   const platosTradicionales = platos.filter(p => {
     const n = p.nombre.toLowerCase();
     const esHornado = n.includes('hornado') || n.includes('horneado');
-    return (n.includes('tonga') || n.includes('seco criollo') || n.includes('caldo criollo')) &&
-           !esHornado &&
-           p.categoria !== 'presa_criolla' && p.categoria !== 'presa_granja' && p.categoria !== 'presa_caldo';
+    return p.categoria === 'tradicional' && !esHornado;
   });
 
-  const jugosNaturales = platos.filter(p => {
-    const n = p.nombre.toLowerCase();
-    const esBebidaComercial = n.includes('cola') || n.includes('agua') || n.includes('botella');
-    return (p.categoria === 'jugo' || n.includes('jugo') || n.includes('chicha') || n.includes('quaker') || n.includes('mora') || n.includes('limon')) && !esBebidaComercial;
-  });
+  // 🟢 2. JUGOS Y BEBIDAS NATURALES
+  const jugosNaturales = platos.filter(p => p.categoria === 'jugo');
 
-  const bebidasComerciales = platos.filter(p => {
-    const n = p.nombre.toLowerCase();
-    return p.categoria === 'bebida' || n.includes('cola') || n.includes('agua') || n.includes('botella') || n.includes('litro');
-  });
+  // 🟢 3. BEBIDAS COMERCIALES Y GASEOSAS
+  const bebidasComerciales = platos.filter(p => p.categoria === 'bebida');
 
-  const aperitivosYExtras = platos.filter(p => {
-    const n = p.nombre.toLowerCase();
-    const esEstructural = p.categoria === 'presa_criolla' || p.categoria === 'presa_granja' || p.categoria === 'presa_caldo' || p.categoria === 'segundo' || p.categoria === 'caldo';
-    const esTradicional = n.includes('tonga') || n.includes('seco criollo') || n.includes('hornado') || n.includes('horneado') || n.includes('caldo criollo') || n.includes('almuerzo del día');
-    const esBebida = p.categoria === 'jugo' || p.categoria === 'bebida' || n.includes('jugo') || n.includes('chicha') || n.includes('quaker') || n.includes('cola') || n.includes('agua');
-    
-    return !esEstructural && !esTradicional && !esBebida;
-  });
+  // 🟢 4. APERITIVOS, EMPANADAS Y EXTRAS
+  const aperitivosYExtras = platos.filter(p => p.categoria === 'extra');
 
   if (cajaCerradaHoy) {
     return (
@@ -861,7 +845,7 @@ export default function ClientMenu() {
           </div>
         )}
 
-        {/* 🟢 CONTENEDOR CON REF PARA AUTO-SCROLL */}
+        {/* CONTENEDOR CON REF PARA AUTO-SCROLL */}
         <div ref={configuradorRef} className="scroll-mt-4">
 
           {/* MODAL CONFIGURADOR ALMUERZO DIARIO */}
@@ -1241,7 +1225,7 @@ export default function ClientMenu() {
           {renderPanelCarrito()}
         </div>
 
-        {/* 5️⃣ SECCIONES CON CUADROS DE COLORES ELEGANTES (CON REF PARA VOLVER TRAS CONFIGURAR) */}
+        {/* 5️⃣ SECCIONES CON CUADROS DE COLORES ELEGANTES */}
         <div ref={catalogoRef} className="space-y-6 scroll-mt-4">
           
           {/* 1. PLATOS TRADICIONALES Y FUERTES */}
