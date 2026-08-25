@@ -224,7 +224,7 @@ export default function AdminPage() {
     const esPerm = esPlatoPermanente(catPlato);
 
     const mensajeConfirmacion = esPerm
-      ? `⚠️ ¡ATENCIÓN! Estás intentando borrar un plato estructural/fijo de la carta ("${nombrePlato}").\n\n¿Estás completamente seguro de eliminarlo del Banco General?`
+      ? `⚠️ ¡ATENCIÓN! Estás intentando borrar un plato fijo de la carta ("${nombrePlato}").\n\n¿Estás completamente seguro de eliminarlo del Banco General?`
       : `¿Estás seguro de que deseas eliminar permanentemente el plato "${nombrePlato}" del Banco General?`;
 
     const seguro = confirm(mensajeConfirmacion);
@@ -418,11 +418,6 @@ export default function AdminPage() {
                   <option value="tradicional">🔥 Platos Tradicionales y Fuertes</option>
                   <option value="bebida">🥤 Bebidas Comerciales y Gaseosas</option>
                   <option value="extra">🥟 Aperitivos, Empanadas y Extras</option>
-                </optgroup>
-                <optgroup label="Presas Específicas">
-                  <option value="presa_granja">🍗 Presa Pollo Granja / Hornado</option>
-                  <option value="presa_criolla">🐓 Presa Gallina Criolla</option>
-                  <option value="presa_caldo">🍲 Presa Caldo Criollo</option>
                 </optgroup>
               </select>
             </div>
@@ -618,7 +613,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* 4️⃣ PANEL DE DISPONIBILIDAD DE COCINA */}
+        {/* 4️⃣ PANEL DE DISPONIBILIDAD DE COCINA (Las presas se siguen controlando aquí) */}
         <div className="order-4 lg:order-4 lg:col-span-7 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
           <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest border-b pb-2">
             Disponibilidad Activa de Cocina
