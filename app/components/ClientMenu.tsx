@@ -150,14 +150,14 @@ export default function ClientMenu() {
       const platosFiltrados = todosLosPlatos.filter((plato) => {
         const nombreLimpio = plato.nombre.toLowerCase();
         
-        // 🟢 Solo las presas internas y el botón base de almuerzo se cargan por defecto
+        // 🟢 Únicamente las presas internas para armar platos y el botón base de almuerzo se cargan por defecto
         const esComponenteEstructural = 
           plato.categoria === 'presa_criolla' ||
           plato.categoria === 'presa_granja' ||
           plato.categoria === 'presa_caldo' ||
           nombreLimpio.includes('almuerzo del día');
 
-        // Todo lo demás (tradicional, jugo, bebida, extra, segundo, caldo) debe tener check en menu_diario
+        // Todo lo demás de la carta y menú diario requiere estar marcado en menu_diario[cite: 6]
         return esComponenteEstructural || idsAsignados.includes(plato.id);
       });
 
@@ -310,7 +310,6 @@ export default function ClientMenu() {
         agregarAlCarritoNormal(plato);
       }
     }
-    // 🟢 Los jugos y demás ítems se agregan directamente al carrito con su nombre y precio
     else {
       agregarAlCarritoNormal(plato);
     }
@@ -665,20 +664,20 @@ export default function ClientMenu() {
 
   const platoAlmuerzoDelDia = platos.find(p => p.nombre.toLowerCase().includes('almuerzo del día'));
   
-  // 🟢 1. PLATOS TRADICIONALES Y FUERTES (Marcados en el Planificador)
+  // 1. PLATOS TRADICIONALES Y FUERTES (Marcados en el Planificador)
   const platosTradicionales = platos.filter(p => {
     const n = p.nombre.toLowerCase();
     const esHornado = n.includes('hornado') || n.includes('horneado');
     return p.categoria === 'tradicional' && !esHornado;
   });
 
-  // 🟢 2. JUGOS Y BEBIDAS NATURALES (Marcados en el Planificador)
+  // 2. JUGOS Y BEBIDAS NATURALES (Marcados en el Planificador)
   const jugosNaturales = platos.filter(p => p.categoria === 'jugo');
 
-  // 🟢 3. BEBIDAS COMERCIALES Y GASEOSAS (Marcadas en el Planificador)
+  // 3. BEBIDAS COMERCIALES Y GASEOSAS (Marcadas en el Planificador)
   const bebidasComerciales = platos.filter(p => p.categoria === 'bebida');
 
-  // 🟢 4. APERITIVOS, EMPANADAS Y EXTRAS (Marcados en el Planificador)
+  // 4. APERITIVOS, EMPANADAS Y EXTRAS (Marcados en el Planificador)
   const aperitivosYExtras = platos.filter(p => p.categoria === 'extra');
 
   if (cajaCerradaHoy) {
