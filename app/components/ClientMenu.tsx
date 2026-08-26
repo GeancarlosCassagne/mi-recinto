@@ -147,6 +147,7 @@ export default function ClientMenu() {
       const idsAsignados = datosMenuDiario ? datosMenuDiario.map((item: any) => item.plato_id) : [];
       
       const platosFiltrados = todosLosPlatos.filter((plato) => {
+        // Solo las presas internas se cargan de forma estructural por defecto
         const esComponenteEstructural = 
           plato.categoria === 'presa_criolla' ||
           plato.categoria === 'presa_granja' ||
@@ -226,7 +227,7 @@ export default function ClientMenu() {
     const combinacionesGuardadas = especificacionExtra.split(',').map(s => s.trim());
 
     const itemsCargados = pedido.detalles_pedido.map((det: any, index: number) => {
-      const coincidencia = combinacionesGuardadas.find(c => c.includes(det.platos.nombre));
+      const coincidencia = combinacionesGuardadas.find(c => c.includes(det.platos?.nombre || ''));
       let detalles = undefined;
       
       if (coincidencia) {
@@ -237,14 +238,14 @@ export default function ClientMenu() {
       }
 
       const idUnico = detalles 
-        ? `${det.plato_id}-${detalles.replace(/\s+/g, '-')}` 
-        : `${det.plato_id}-${index}`;
+        ? `${det.plato_id || 'virtual'}-${detalles.replace(/\s+/g, '-')}` 
+        : `${det.plato_id || 'virtual'}-${index}`;
 
       return {
         idUnico,
         plato: {
-          id: det.plato_id,
-          nombre: det.platos.nombre,
+          id: det.plato_id || 'almuerzo-dia-virtual',
+          nombre: det.platos?.nombre || 'Almuerzo del Día',
           precio: det.precio_unitario,
           disponible: true,
           categoria: 'tradicional'
@@ -926,6 +927,15 @@ export default function ClientMenu() {
                     {tipoAlmuerzo === 'completo' ? '4. Selecciona el Jugo del Día:' : '3. Selecciona el Jugo del Día:'}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                    
+                    {/* 🟢 OPCIÓN NATIVA "SIN JUGO" */}
+                    <button 
+                      onClick={() => finalizarAlmuerzo('Sin jugo')} 
+                      className="p-3 bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-800 hover:bg-slate-200 transition text-center text-xs shadow-sm"
+                    >
+                      🚫 Sin Jugo (Mantiene precio)
+                    </button>
+
                     {opcionesBebidas.length === 0 ? (
                       <button 
                         onClick={() => finalizarAlmuerzo('Sin bebida')} 
@@ -1355,7 +1365,7 @@ export default function ClientMenu() {
                             <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Composición:</p>
                             {ped.detalles_pedido?.map((det: any, idx: number) => (
                               <p key={idx} className="text-xs text-gray-700 font-medium capitalize flex justify-between">
-                                <span>• {det.platos?.nombre}</span>
+                                <span>• {det.platos?.nombre || 'Almuerzo del Día'}</span>
                                 <span className="font-bold text-gray-400 text-[11px]">x{det.cantidad}</span>
                               </p>
                             ))}
