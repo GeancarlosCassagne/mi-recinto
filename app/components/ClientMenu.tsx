@@ -74,7 +74,6 @@ export default function ClientMenu() {
 
   // MODAL ALMUERZO
   const [configurandoAlmuerzo, setConfigurandoAlmuerzo] = useState(false);
-  const [almuerzoSeleccionado, setAlmuerzoSeleccionado] = useState<Plato | null>(null);
   const [pasoAlmuerzo, setPasoAlmuerzo] = useState<'tipo' | 'caldo' | 'segundo' | 'presa_segundo' | 'bebida'>('tipo');
   const [tipoAlmuerzo, setTipoAlmuerzo] = useState<'completo' | 'segundo' | 'caldo'>('completo');
   const [sopaElegida, setSopaElegida] = useState<string>('');
@@ -148,16 +147,11 @@ export default function ClientMenu() {
       const idsAsignados = datosMenuDiario ? datosMenuDiario.map((item: any) => item.plato_id) : [];
       
       const platosFiltrados = todosLosPlatos.filter((plato) => {
-        const nombreLimpio = plato.nombre.toLowerCase();
-        
-        // 🟢 Únicamente las presas internas para armar platos y el botón base de almuerzo se cargan por defecto
         const esComponenteEstructural = 
           plato.categoria === 'presa_criolla' ||
           plato.categoria === 'presa_granja' ||
-          plato.categoria === 'presa_caldo' ||
-          nombreLimpio.includes('almuerzo del día');
+          plato.categoria === 'presa_caldo';
 
-        // Todo lo demás de la carta y menú diario requiere estar marcado en menu_diario[cite: 6]
         return esComponenteEstructural || idsAsignados.includes(plato.id);
       });
 
@@ -292,14 +286,6 @@ export default function ClientMenu() {
       setTipoGallina('Caldo');
       scrollHaciaConfigurador();
     } 
-    else if (nombreLimpio.includes('almuerzo del día')) {
-      setAlmuerzoSeleccionado(plato);
-      setConfigurandoAlmuerzo(true);
-      setPasoAlmuerzo('tipo');
-      setSegundoElegido('');
-      setSopaElegida('');
-      scrollHaciaConfigurador();
-    } 
     else if (nombreLimpio === 'cola' || nombreLimpio.startsWith('cola ')) {
       if (nombreLimpio === 'cola') {
         setColaSeleccionada(plato);
@@ -327,6 +313,14 @@ export default function ClientMenu() {
       }
       return [...prev, { idUnico: plato.id, plato, grid: 1 }];
     });
+  };
+
+  const iniciarArmarAlmuerzo = () => {
+    setConfigurandoAlmuerzo(true);
+    setPasoAlmuerzo('tipo');
+    setSegundoElegido('');
+    setSopaElegida('');
+    scrollHaciaConfigurador();
   };
 
   const finalizarTonga = (presa: string) => {
@@ -414,8 +408,6 @@ export default function ClientMenu() {
   };
 
   const finalizarAlmuerzo = (bebidaFinal: string) => {
-    if (!almuerzoSeleccionado) return;
-
     mostrarCheckCentral('Añadido');
 
     let detalles = '';
@@ -429,8 +421,16 @@ export default function ClientMenu() {
       detalles = `Solo Caldo: ${sopaElegida} + ${bebidaFinal}${tagLlevar}`;
     }
 
-    const idUnico = `${almuerzoSeleccionado.id}-${detalles.replace(/\s+/g, '-')}`;
-    const platoModificado = { ...almuerzoSeleccionado, precio: almuerzoPrecio };
+    const platoIdVirtual = 'almuerzo-dia-virtual';
+    const idUnico = `${platoIdVirtual}-${detalles.replace(/\s+/g, '-')}`;
+    
+    const platoModificado = {
+      id: platoIdVirtual,
+      nombre: 'Almuerzo del Día',
+      precio: almuerzoPrecio,
+      disponible: true,
+      categoria: 'segundo'
+    };
 
     setCarrito((prev) => {
       const existe = prev.find((item) => item.idUnico === idUnico);
@@ -441,7 +441,6 @@ export default function ClientMenu() {
     });
 
     setConfigurandoAlmuerzo(false);
-    setAlmuerzoSeleccionado(null);
     scrollHaciaCatalogo();
   };
 
@@ -592,7 +591,7 @@ export default function ClientMenu() {
 
         const detallesParaInsertar = carrito.map((item) => ({
           pedido_id: idPedidoAEditar,
-          plato_id: item.plato.id,
+          plato_id: item.plato.id === 'almuerzo-dia-virtual' ? null : item.plato.id,
           cantidad: item.grid,
           precio_unitario: item.plato.precio
         }));
@@ -618,7 +617,7 @@ export default function ClientMenu() {
 
         const detallesParaInsertar = carrito.map((item) => ({
           pedido_id: nuevoPedido.id,
-          plato_id: item.plato.id,
+          plato_id: item.plato.id === 'almuerzo-dia-virtual' ? null : item.plato.id,
           cantidad: item.grid,
           precio_unitario: item.plato.precio
         }));
@@ -651,7 +650,6 @@ export default function ClientMenu() {
   ].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
 
   const opcionesCaldos = platos.filter(p => p.categoria === 'caldo');
-
   const opcionesBebidas = platos.filter(p => p.categoria === 'jugo');
 
   const opcionesPresasSegunGallina = () => {
@@ -662,22 +660,14 @@ export default function ClientMenu() {
     return [];
   };
 
-  const platoAlmuerzoDelDia = platos.find(p => p.nombre.toLowerCase().includes('almuerzo del día'));
-  
-  // 1. PLATOS TRADICIONALES Y FUERTES (Marcados en el Planificador)
   const platosTradicionales = platos.filter(p => {
     const n = p.nombre.toLowerCase();
     const esHornado = n.includes('hornado') || n.includes('horneado');
     return p.categoria === 'tradicional' && !esHornado;
   });
 
-  // 2. JUGOS Y BEBIDAS NATURALES (Marcados en el Planificador)
   const jugosNaturales = platos.filter(p => p.categoria === 'jugo');
-
-  // 3. BEBIDAS COMERCIALES Y GASEOSAS (Marcadas en el Planificador)
   const bebidasComerciales = platos.filter(p => p.categoria === 'bebida');
-
-  // 4. APERITIVOS, EMPANADAS Y EXTRAS (Marcados en el Planificador)
   const aperitivosYExtras = platos.filter(p => p.categoria === 'extra');
 
   if (cajaCerradaHoy) {
@@ -1116,38 +1106,31 @@ export default function ClientMenu() {
 
         </div>
 
-        {/* 3️⃣ ARMAR ALMUERZO DEL DÍA */}
-        {platoAlmuerzoDelDia && (
-          <div className="bg-gradient-to-r from-emerald-800 to-emerald-950 text-white rounded-2xl p-6 shadow-md border border-emerald-900 flex flex-col sm:flex-row justify-between items-center gap-6 relative overflow-hidden group">
-            <div className="absolute -right-4 -top-4 text-white/5 transform rotate-12 transition-transform group-hover:scale-110 duration-300">
-              <Utensils className="h-32 w-32" />
-            </div>
-            <div className="space-y-1.5 min-w-0 z-10">
-              <span className="bg-emerald-700 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center gap-1 w-fit shadow-sm">
-                <Sparkles className="h-3 w-3 fill-white" /> Sugerencia de la Casa
-              </span>
-              <h2 className="text-xl font-black tracking-tight capitalize">{platoAlmuerzoDelDia.nombre} {tipoEntrega === 'llevar' && <span className="text-emerald-300 text-sm block sm:inline sm:ml-2">(Para Llevar)</span>}</h2>
-              <p className="text-xs text-emerald-200 font-medium">Configura sopa, segundo o el servicio completo al instante.</p>
-            </div>
-            <div className="flex items-center gap-4 shrink-0 z-10 w-full sm:w-auto justify-between sm:justify-end">
-              <span className="text-2xl font-black text-emerald-300 tracking-tight">
-                ${(tipoEntrega === 'llevar' ? Number(platoAlmuerzoDelDia.precio) + 0.25 : Number(platoAlmuerzoDelDia.precio)).toFixed(2)}
-              </span>
-              <button
-                onClick={() => platoAlmuerzoDelDia.disponible && handleAgregarClick(platoAlmuerzoDelDia)}
-                disabled={!platoAlmuerzoDelDia.disponible}
-                className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition shadow-md flex items-center space-x-2 ${
-                  platoAlmuerzoDelDia.disponible 
-                    ? 'bg-white text-emerald-950 hover:bg-emerald-50 hover:scale-[1.02]' 
-                    : 'bg-emerald-900/50 text-emerald-600 cursor-not-allowed border border-emerald-800'
-                }`}
-              >
-                <Plus className="h-4 w-4 stroke-[3]" />
-                <span>{platoAlmuerzoDelDia.disponible ? 'Armar Almuerzo' : 'Agotado hoy'}</span>
-              </button>
-            </div>
+        {/* 🟢 3️⃣ BOTÓN NATIVO PERMANENTE PARA ARMAR ALMUERZO DEL DÍA */}
+        <div className="bg-gradient-to-r from-emerald-800 to-emerald-950 text-white rounded-2xl p-6 shadow-md border border-emerald-900 flex flex-col sm:flex-row justify-between items-center gap-6 relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 text-white/5 transform rotate-12 transition-transform group-hover:scale-110 duration-300">
+            <Utensils className="h-32 w-32" />
           </div>
-        )}
+          <div className="space-y-1.5 min-w-0 z-10">
+            <span className="bg-emerald-700 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center gap-1 w-fit shadow-sm">
+              <Sparkles className="h-3 w-3 fill-white" /> Sugerencia de la Casa
+            </span>
+            <h2 className="text-xl font-black tracking-tight capitalize">Almuerzo del Día {tipoEntrega === 'llevar' && <span className="text-emerald-300 text-sm block sm:inline sm:ml-2">(Para Llevar)</span>}</h2>
+            <p className="text-xs text-emerald-200 font-medium">Configura sopa, segundo o el servicio completo al instante.</p>
+          </div>
+          <div className="flex items-center gap-4 shrink-0 z-10 w-full sm:w-auto justify-between sm:justify-end">
+            <span className="text-2xl font-black text-emerald-300 tracking-tight">
+              $3.00
+            </span>
+            <button
+              onClick={iniciarArmarAlmuerzo}
+              className="px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition shadow-md flex items-center space-x-2 bg-white text-emerald-950 hover:bg-emerald-50 hover:scale-[1.02]"
+            >
+              <Plus className="h-4 w-4 stroke-[3]" />
+              <span>Armar Almuerzo</span>
+            </button>
+          </div>
+        </div>
 
         {/* 4️⃣ PANEL DE PEDIDO / CARRITO EN MÓVIL */}
         <div className="block md:hidden">
