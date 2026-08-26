@@ -154,7 +154,7 @@ export default function ClientMenu() {
       const platosFiltrados = todosLosPlatos.filter((plato) => {
         const nombreLimpio = plato.nombre.toLowerCase();
         
-        // 🟢 Carga directa sin depender de la categoría 'fijo'
+        // 🟢 'jugo', 'segundo' y 'caldo' NO son estructurales: dependen estrictamente de estar en menu_diario
         const esComponenteEstructural = 
           plato.categoria === 'presa_criolla' ||
           plato.categoria === 'presa_granja' ||
@@ -162,7 +162,6 @@ export default function ClientMenu() {
           plato.categoria === 'tradicional' ||
           plato.categoria === 'bebida' ||
           plato.categoria === 'extra' ||
-          plato.categoria === 'jugo' ||
           nombreLimpio.includes('almuerzo del día');
 
         return esComponenteEstructural || idsAsignados.includes(plato.id);
@@ -317,11 +316,7 @@ export default function ClientMenu() {
         agregarAlCarritoNormal(plato);
       }
     }
-    else if (nombreLimpio === 'jugo' || nombreLimpio === 'jugos') {
-      setJugoSeleccionado(plato);
-      setConfigurandoJugo(true);
-      scrollHaciaConfigurador();
-    }
+    // 🟢 Los jugos se agregan directamente al carrito con su nombre y precio
     else {
       agregarAlCarritoNormal(plato);
     }
