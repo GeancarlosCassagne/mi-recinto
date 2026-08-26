@@ -88,10 +88,6 @@ export default function ClientMenu() {
   const [colaTamano, setColaTamano] = useState<'Personal' | 'Litro'>('Personal');
   const [colaEnvase, setColaEnvase] = useState<'Vidrio' | 'Plástico'>('Vidrio');
 
-  // MODAL JUGO
-  const [configurandoJugo, setConfigurandoJugo] = useState(false);
-  const [jugoSeleccionado, setJugoSeleccionado] = useState<Plato | null>(null);
-
   const [mostrarConfirmarModal, setMostrarConfirmarModal] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState(false);
@@ -154,16 +150,14 @@ export default function ClientMenu() {
       const platosFiltrados = todosLosPlatos.filter((plato) => {
         const nombreLimpio = plato.nombre.toLowerCase();
         
-        // 🟢 'jugo', 'segundo' y 'caldo' NO son estructurales: dependen estrictamente de estar en menu_diario
+        // 🟢 Solo las presas internas y el botón base de almuerzo se cargan por defecto
         const esComponenteEstructural = 
           plato.categoria === 'presa_criolla' ||
           plato.categoria === 'presa_granja' ||
           plato.categoria === 'presa_caldo' ||
-          plato.categoria === 'tradicional' ||
-          plato.categoria === 'bebida' ||
-          plato.categoria === 'extra' ||
           nombreLimpio.includes('almuerzo del día');
 
+        // Todo lo demás (tradicional, jugo, bebida, extra, segundo, caldo) debe tener check en menu_diario
         return esComponenteEstructural || idsAsignados.includes(plato.id);
       });
 
@@ -316,7 +310,7 @@ export default function ClientMenu() {
         agregarAlCarritoNormal(plato);
       }
     }
-    // 🟢 Los jugos se agregan directamente al carrito con su nombre y precio
+    // 🟢 Los jugos y demás ítems se agregan directamente al carrito con su nombre y precio
     else {
       agregarAlCarritoNormal(plato);
     }
@@ -479,32 +473,6 @@ export default function ClientMenu() {
 
     setConfigurandoCola(false);
     setColaSeleccionada(null);
-    scrollHaciaCatalogo();
-  };
-
-  const finalizarConfiguracionJugo = (saborJugo: string) => {
-    if (!jugoSeleccionado) return;
-    mostrarCheckCentral('Jugo Añadido');
-
-    const detalles = `(${saborJugo})`;
-    const idUnico = `${jugoSeleccionado.id}-${detalles.replace(/\s+/g, '-')}`;
-
-    const platoJugo = {
-      ...jugoSeleccionado,
-      nombre: `Jugo (${saborJugo})`,
-      precio: Number(jugoSeleccionado.precio) || 0.50
-    };
-
-    setCarrito((prev) => {
-      const existe = prev.find((item) => item.idUnico === idUnico);
-      if (existe) {
-        return prev.map((item) => item.idUnico === idUnico ? { ...item, grid: item.grid + 1 } : item);
-      }
-      return [...prev, { idUnico, plato: platoJugo, grid: 1, detallesPersonalizados: detalles }];
-    });
-
-    setConfigurandoJugo(false);
-    setJugoSeleccionado(null);
     scrollHaciaCatalogo();
   };
 
@@ -697,20 +665,20 @@ export default function ClientMenu() {
 
   const platoAlmuerzoDelDia = platos.find(p => p.nombre.toLowerCase().includes('almuerzo del día'));
   
-  // 🟢 1. PLATOS TRADICIONALES Y FUERTES
+  // 🟢 1. PLATOS TRADICIONALES Y FUERTES (Marcados en el Planificador)
   const platosTradicionales = platos.filter(p => {
     const n = p.nombre.toLowerCase();
     const esHornado = n.includes('hornado') || n.includes('horneado');
     return p.categoria === 'tradicional' && !esHornado;
   });
 
-  // 🟢 2. JUGOS Y BEBIDAS NATURALES
+  // 🟢 2. JUGOS Y BEBIDAS NATURALES (Marcados en el Planificador)
   const jugosNaturales = platos.filter(p => p.categoria === 'jugo');
 
-  // 🟢 3. BEBIDAS COMERCIALES Y GASEOSAS
+  // 🟢 3. BEBIDAS COMERCIALES Y GASEOSAS (Marcadas en el Planificador)
   const bebidasComerciales = platos.filter(p => p.categoria === 'bebida');
 
-  // 🟢 4. APERITIVOS, EMPANADAS Y EXTRAS
+  // 🟢 4. APERITIVOS, EMPANADAS Y EXTRAS (Marcados en el Planificador)
   const aperitivosYExtras = platos.filter(p => p.categoria === 'extra');
 
   if (cajaCerradaHoy) {
@@ -1144,39 +1112,6 @@ export default function ClientMenu() {
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* MODAL CONFIGURADOR DE JUGOS */}
-          {configurandoJugo && (
-            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-6 shadow-sm space-y-4 mb-6">
-              <div className="flex justify-between items-center border-b border-amber-100 pb-3">
-                <h3 className="text-base font-bold text-amber-950 flex items-center gap-2">
-                  <Milk className="h-5 w-5 text-amber-700" />
-                  <span>Seleccionar Tipo / Sabor de Jugo</span>
-                </h3>
-                <button onClick={() => { setConfigurandoJugo(false); scrollHaciaCatalogo(); }} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cancelar</button>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {[
-                  { nombre: 'Jugo de Limón / Limonada', icono: '🍋' },
-                  { nombre: 'Jugo de Mora', icono: '🫐' },
-                  { nombre: 'Quaker / Avena con Naranjilla', icono: '🌾' },
-                  { nombre: 'Chicha Manaba', icono: '🌽' },
-                  { nombre: 'Jugo de Maracuyá', icono: '🍊' },
-                  { nombre: 'Jugo de Tamarindo', icono: '🧃' }
-                ].map((j) => (
-                  <button 
-                    key={j.nombre}
-                    onClick={() => finalizarConfiguracionJugo(j.nombre)}
-                    className="p-3.5 bg-white border rounded-xl font-bold text-xs uppercase hover:bg-amber-700 hover:text-white transition shadow-sm flex flex-col items-center justify-center gap-1"
-                  >
-                    <span className="text-base">{j.icono}</span>
-                    <span>{j.nombre}</span>
-                  </button>
-                ))}
-              </div>
             </div>
           )}
 
